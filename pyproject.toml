@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.26.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flin-google-search-console-mcp"
+version = "0.1.0"
+description = "Read-only MCP server for Google Search Console performance and URL inspection."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "flin.agency" }
+]
+keywords = ["mcp", "google-search-console", "search-console", "model-context-protocol", "claude"]
+dependencies = [
+  "mcp>=1.6.0",
+  "google-api-python-client>=2.170.0",
+  "google-auth>=2.40.0",
+  "google-auth-oauthlib>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "build>=1.2.2",
+]
+
+[project.scripts]
+flin-google-search-console-mcp = "flin_google_search_console_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/flin-agency/flin-google-search-console-mcp"
+Repository = "https://github.com/flin-agency/flin-google-search-console-mcp"
+Issues = "https://github.com/flin-agency/flin-google-search-console-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flin_google_search_console_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
