@@ -110,7 +110,7 @@ If you want the token file in a stable custom location:
         "GOOGLE_CLIENT_ID": "xxx",
         "GOOGLE_CLIENT_SECRET": "xxx",
         "GOOGLE_SEARCH_CONSOLE_SITE_URL": "sc-domain:example.com",
-        "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH": "/Users/you/.config/flin-google-search-console-mcp/token.json"
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH": "/absolute/path/to/flin-google-search-console-mcp-token.json"
       }
     }
   }
@@ -127,7 +127,7 @@ If you want the token file in a stable custom location:
       "args": [
         "run",
         "--directory",
-        "/Users/nicolasg/Antigravity/flin-google-search-console-mcp",
+        "/absolute/path/to/flin-google-search-console-mcp",
         "flin-google-search-console-mcp"
       ],
       "env": {
@@ -139,6 +139,8 @@ If you want the token file in a stable custom location:
   }
 }
 ```
+
+Replace `/absolute/path/to/flin-google-search-console-mcp` with the local path of your checkout.
 
 ## Typical usage flow
 
