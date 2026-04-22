@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a read-only MCP server for Google Search Console that mirrors the ergonomics and repository structure of `flin-google-ads-mcp`, while replacing manual refresh-token configuration with a Claude Desktop-friendly installed-app OAuth flow that stores and refreshes tokens locally.
+Build a read-only MCP server for Google Search Console with a Claude Desktop-friendly installed-app OAuth flow that stores and refreshes tokens locally.
 
 ## Product Scope
 
@@ -29,7 +29,7 @@ Build a read-only MCP server for Google Search Console that mirrors the ergonomi
 
 ## Constraints
 
-- Keep the repository layout and operating model close to `flin-google-ads-mcp`
+- Keep the repository layout and operating model simple and consistent
 - Do not require a refresh token in the Claude Desktop MCP config
 - Support the initial login and re-login flow entirely from the running MCP process
 - Use official Google OAuth and auth libraries for token handling

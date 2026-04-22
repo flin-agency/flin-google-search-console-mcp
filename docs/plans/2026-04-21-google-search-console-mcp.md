@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build a read-only Google Search Console MCP with local OAuth token management, Search Analytics tools, and URL Inspection tools, closely mirroring the ergonomics of the Google Ads MCP.
+**Goal:** Build a read-only Google Search Console MCP with local OAuth token management, Search Analytics tools, and URL Inspection tools.
 
 **Architecture:** Use a `FastMCP` server with separate modules for config, auth, Search Console API access, and MCP tools. Keep OAuth on official Google auth libraries and implement a thin Search Console domain layer that normalizes requests and shapes responses for Claude.
 
