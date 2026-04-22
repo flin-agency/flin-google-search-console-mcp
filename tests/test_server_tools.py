@@ -47,7 +47,7 @@ def test_health_check_reports_ready_state(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["status"] == "ready"
     assert result["default_site_url"] == "sc-domain:example.com"
-    assert result["token_path"] == "/tmp/token.json"
+    assert "token_path" not in result
 
 
 def test_list_sites_returns_wrapped_payload(monkeypatch) -> None:

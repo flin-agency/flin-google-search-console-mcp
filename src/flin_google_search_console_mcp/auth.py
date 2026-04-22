@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 import json
+import os
+import tempfile
 
 from .config import Settings, load_settings
 
@@ -24,13 +26,9 @@ def _load_token_info(token_path: Path) -> dict[str, Any]:
     try:
         return json.loads(token_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise AuthenticationRequiredError(
-            f"No token file found at {token_path}."
-        ) from exc
+        raise AuthenticationRequiredError("No token file found.") from exc
     except json.JSONDecodeError as exc:
-        raise AuthenticationError(
-            f"Token file at {token_path} is not valid JSON."
-        ) from exc
+        raise AuthenticationError("Token file is not valid JSON.") from exc
 
 
 def _build_credentials_from_info(
@@ -83,18 +81,58 @@ def _run_installed_app_flow(settings: Settings) -> Any:
         open_browser=True,
         access_type="offline",
         prompt="consent",
-        authorization_prompt_message=(
-            "Open the following URL in your browser to authorize Google Search Console access: {url}"
-        ),
+        authorization_prompt_message="",
         success_message=(
             "Google Search Console authorization complete. You can close this tab and return to Claude Desktop."
         ),
     )
 
 
+def _ensure_private_token_dir(token_path: Path) -> None:
+    token_dir = token_path.parent
+    if token_dir.is_symlink():
+        raise AuthenticationError(
+            "Refusing to store credentials in a symlinked directory."
+        )
+
+    token_dir.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        os.chmod(token_dir, 0o700)
+
+
+def _write_credentials_atomically(token_json: str, token_path: Path) -> None:
+    if token_path.is_symlink():
+        raise AuthenticationError(
+            "Refusing to write credentials through a symlinked token path."
+        )
+
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{token_path.name}.",
+        dir=token_path.parent,
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        if os.name != "nt":
+            os.fchmod(fd, 0o600)
+
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(token_json)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        os.replace(tmp_path, token_path)
+        if os.name != "nt":
+            os.chmod(token_path, 0o600)
+    finally:
+        try:
+            tmp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def save_credentials(credentials: Any, token_path: Path) -> None:
-    token_path.parent.mkdir(parents=True, exist_ok=True)
-    token_path.write_text(credentials.to_json(), encoding="utf-8")
+    _ensure_private_token_dir(token_path)
+    _write_credentials_atomically(credentials.to_json(), token_path)
 
 
 def get_credentials(
@@ -150,7 +188,6 @@ def describe_auth_state(*, settings: Settings | None = None) -> dict[str, Any]:
     if not token_path.exists():
         return {
             "status": "oauth_required",
-            "token_path": str(token_path),
             "has_token_file": False,
         }
 
@@ -160,7 +197,6 @@ def describe_auth_state(*, settings: Settings | None = None) -> dict[str, Any]:
     except AuthenticationError as exc:
         return {
             "status": "invalid_token_file",
-            "token_path": str(token_path),
             "has_token_file": True,
             "error": str(exc),
         }
@@ -176,6 +212,5 @@ def describe_auth_state(*, settings: Settings | None = None) -> dict[str, Any]:
 
     return {
         "status": status,
-        "token_path": str(token_path),
         "has_token_file": True,
     }

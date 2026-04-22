@@ -74,7 +74,6 @@ def health_check() -> dict[str, Any]:
         "ok": auth_state["status"] in {"ready", "refreshable"},
         "status": auth_state["status"],
         "default_site_url": settings.default_site_url,
-        "token_path": auth_state["token_path"],
         "has_token_file": auth_state["has_token_file"],
         "oauth_port": settings.oauth_port,
     }
