@@ -41,6 +41,7 @@ def _settings(token_path: Path) -> Settings:
         client_secret="client-secret",
         default_site_url="sc-domain:example.com",
         token_path=token_path,
+        token_dir=token_path.parent,
         oauth_port=0,
     )
 
@@ -61,6 +62,32 @@ def test_get_credentials_loads_valid_credentials_from_token_file(
     result = auth.get_credentials(settings=_settings(token_path), interactive=False)
 
     assert result is credentials
+
+
+def test_get_credentials_loads_named_account_credentials_from_token_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    default_token_path = tmp_path / "token.json"
+    named_token_path = tmp_path / "work.json"
+    default_token_path.write_text('{"token":"default"}', encoding="utf-8")
+    named_token_path.write_text('{"token":"work"}', encoding="utf-8")
+    credentials = FakeCredentials(valid=True)
+    captured: dict[str, object] = {}
+
+    def fake_build(info: dict[str, object], scopes: tuple[str, ...]) -> FakeCredentials:
+        captured["info"] = info
+        return credentials
+
+    monkeypatch.setattr(auth, "_build_credentials_from_info", fake_build)
+
+    result = auth.get_credentials(
+        settings=_settings(default_token_path),
+        account="work",
+        interactive=False,
+    )
+
+    assert result is credentials
+    assert captured["info"] == {"token": "work"}
 
 
 def test_get_credentials_refreshes_expired_credentials(
@@ -198,6 +225,30 @@ def test_describe_auth_state_omits_token_path_when_oauth_is_required(
     assert state == {
         "status": "oauth_required",
         "has_token_file": False,
+    }
+
+
+def test_describe_auth_state_uses_named_account_token(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    default_token_path = tmp_path / "token.json"
+    named_token_path = tmp_path / "work.json"
+    named_token_path.write_text('{"token":"work"}', encoding="utf-8")
+
+    monkeypatch.setattr(
+        auth,
+        "_build_credentials_from_info",
+        lambda info, scopes: FakeCredentials(valid=True),
+    )
+
+    state = auth.describe_auth_state(
+        settings=_settings(default_token_path),
+        account="work",
+    )
+
+    assert state == {
+        "status": "ready",
+        "has_token_file": True,
     }
 
 

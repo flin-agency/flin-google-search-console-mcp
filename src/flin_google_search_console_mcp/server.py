@@ -53,8 +53,19 @@ def _error_payload(exc: Exception) -> dict[str, Any]:
     }
 
 
+def _account_payload(account: str | None) -> dict[str, str]:
+    if account is None:
+        return {}
+
+    normalized = account.strip()
+    if not normalized:
+        return {}
+
+    return {"account": normalized}
+
+
 @mcp.tool()
-def health_check() -> dict[str, Any]:
+def health_check(account: str | None = None) -> dict[str, Any]:
     """Check configuration and authentication readiness for Google Search Console."""
     missing = missing_required_env_vars()
     if missing:
@@ -66,12 +77,13 @@ def health_check() -> dict[str, Any]:
 
     try:
         settings = load_settings()
-        auth_state = describe_auth_state(settings=settings)
+        auth_state = describe_auth_state(settings=settings, account=account)
     except Exception as exc:
         return _error_payload(exc)
 
     return {
         "ok": auth_state["status"] in {"ready", "refreshable"},
+        **_account_payload(account),
         "status": auth_state["status"],
         "default_site_url": settings.default_site_url,
         "has_token_file": auth_state["has_token_file"],
@@ -80,10 +92,10 @@ def health_check() -> dict[str, Any]:
 
 
 @mcp.tool()
-def list_sites() -> dict[str, Any]:
+def list_sites(account: str | None = None) -> dict[str, Any]:
     """List Search Console properties accessible by the authenticated user."""
     try:
-        result = list_sites_data()
+        result = list_sites_data(account=account)
         return {"ok": True, **result}
     except Exception as exc:
         return _error_payload(exc)
@@ -96,6 +108,7 @@ def get_site_summary(
     site_url: str | None = None,
     search_type: str = "web",
     data_state: str | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Get aggregate performance metrics for a property over a date range."""
     try:
@@ -105,6 +118,7 @@ def get_site_summary(
             end_date=end_date,
             search_type=search_type,
             data_state=data_state,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -123,6 +137,7 @@ def query_performance(
     row_limit: int = 1000,
     start_row: int = 0,
     filters: list[dict[str, str]] | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Query Search Analytics performance data with explicit dimensions and filters."""
     try:
@@ -137,6 +152,7 @@ def query_performance(
             row_limit=row_limit,
             start_row=start_row,
             filters=filters,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -153,6 +169,7 @@ def get_top_queries(
     row_limit: int = 1000,
     start_row: int = 0,
     filters: list[dict[str, str]] | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Get top query rows for a property over a date range."""
     try:
@@ -165,6 +182,7 @@ def get_top_queries(
             row_limit=row_limit,
             start_row=start_row,
             filters=filters,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -181,6 +199,7 @@ def get_top_pages(
     row_limit: int = 1000,
     start_row: int = 0,
     filters: list[dict[str, str]] | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Get top page rows for a property over a date range."""
     try:
@@ -193,6 +212,7 @@ def get_top_pages(
             row_limit=row_limit,
             start_row=start_row,
             filters=filters,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -210,6 +230,7 @@ def get_dimension_breakdown(
     row_limit: int = 1000,
     start_row: int = 0,
     filters: list[dict[str, str]] | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Get a single-dimension Search Analytics breakdown."""
     try:
@@ -223,6 +244,7 @@ def get_dimension_breakdown(
             row_limit=row_limit,
             start_row=start_row,
             filters=filters,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -234,6 +256,7 @@ def inspect_url(
     inspection_url: str,
     site_url: str | None = None,
     language_code: str | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     """Inspect the indexed status of a specific URL under a property."""
     try:
@@ -241,6 +264,7 @@ def inspect_url(
             site_url=site_url,
             inspection_url=inspection_url,
             language_code=language_code,
+            account=account,
         )
         return {"ok": True, **result}
     except Exception as exc:

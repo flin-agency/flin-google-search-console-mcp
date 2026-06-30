@@ -175,6 +175,41 @@ If you want to override the location:
 }
 ```
 
+### Multiple Google accounts
+
+You can connect multiple Google accounts and choose the account per tool call.
+
+By default, named account tokens are stored next to the default token. To choose a dedicated token directory, set `GOOGLE_SEARCH_CONSOLE_TOKEN_DIR`:
+
+```json
+{
+  "mcpServers": {
+    "flin-google-search-console-mcp": {
+      "command": "uvx",
+      "args": ["flin-google-search-console-mcp@latest"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "your_oauth_client_id",
+        "GOOGLE_CLIENT_SECRET": "your_oauth_client_secret",
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_DIR": "/absolute/path/to/search-console-tokens"
+      }
+    }
+  }
+}
+```
+
+Then pass `account` in tool calls:
+
+```json
+{
+  "tool": "list_sites",
+  "args": {
+    "account": "work"
+  }
+}
+```
+
+The first call for a new account opens the OAuth browser flow and stores a separate token, for example `work.json`. Account names may contain only letters, numbers, `_`, `-`, and `.`.
+
 ## First Prompts To Verify Everything Works
 
 Use these in Claude Desktop after the server is configured.
@@ -285,6 +320,7 @@ Supported knobs include:
 {
   "tool": "get_top_queries",
   "args": {
+    "account": "work",
     "site_url": "sc-domain:example.com",
     "start_date": "2026-04-01",
     "end_date": "2026-04-20",

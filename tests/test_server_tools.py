@@ -35,7 +35,7 @@ def test_health_check_reports_ready_state(monkeypatch) -> None:
     monkeypatch.setattr(
         server,
         "describe_auth_state",
-        lambda settings=None: {
+        lambda settings=None, account=None: {
             "status": "ready",
             "token_path": "/tmp/token.json",
             "has_token_file": True,
@@ -50,11 +50,43 @@ def test_health_check_reports_ready_state(monkeypatch) -> None:
     assert "token_path" not in result
 
 
-def test_list_sites_returns_wrapped_payload(monkeypatch) -> None:
+def test_health_check_uses_named_account(monkeypatch) -> None:
+    captured = {}
+    monkeypatch.setattr(server, "missing_required_env_vars", lambda env=None: [])
     monkeypatch.setattr(
         server,
-        "list_sites_data",
-        lambda: {
+        "load_settings",
+        lambda: SimpleNamespace(
+            default_site_url="sc-domain:example.com",
+            token_path="/tmp/token.json",
+            token_dir="/tmp",
+            oauth_port=0,
+        ),
+    )
+
+    def fake_describe_auth_state(settings=None, account=None):
+        captured["account"] = account
+        return {
+            "status": "ready",
+            "has_token_file": True,
+        }
+
+    monkeypatch.setattr(server, "describe_auth_state", fake_describe_auth_state)
+
+    result = server.health_check(account="work")
+
+    assert result["ok"] is True
+    assert result["account"] == "work"
+    assert captured["account"] == "work"
+
+
+def test_list_sites_returns_wrapped_payload(monkeypatch) -> None:
+    captured = {}
+
+    def fake_list_sites_data(account=None):
+        captured["account"] = account
+        return {
+            "account": account,
             "count": 1,
             "items": [
                 {
@@ -62,21 +94,29 @@ def test_list_sites_returns_wrapped_payload(monkeypatch) -> None:
                     "permission_level": "siteOwner",
                 }
             ],
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "list_sites_data",
+        fake_list_sites_data,
     )
 
-    result = server.list_sites()
+    result = server.list_sites(account="work")
 
     assert result["ok"] is True
+    assert result["account"] == "work"
+    assert captured["account"] == "work"
     assert result["count"] == 1
     assert result["items"][0]["site_url"] == "sc-domain:example.com"
 
 
 def test_get_site_summary_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "get_site_summary_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_get_site_summary_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "metrics": {
                 "clicks": 10,
@@ -85,24 +125,32 @@ def test_get_site_summary_returns_wrapped_payload(monkeypatch) -> None:
                 "position": 2.5,
             },
             "meta": {"response_aggregation_type": "byProperty"},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "get_site_summary_data",
+        fake_get_site_summary_data,
     )
 
     result = server.get_site_summary(
         site_url="sc-domain:example.com",
         start_date="2026-04-01",
         end_date="2026-04-10",
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["metrics"]["clicks"] == 10
+    assert captured["account"] == "work"
 
 
 def test_query_performance_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "query_performance_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_query_performance_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "items": [
                 {
@@ -111,7 +159,12 @@ def test_query_performance_returns_wrapped_payload(monkeypatch) -> None:
                 }
             ],
             "meta": {"rows_returned": 1},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "query_performance_data",
+        fake_query_performance_data,
     )
 
     result = server.query_performance(
@@ -119,66 +172,90 @@ def test_query_performance_returns_wrapped_payload(monkeypatch) -> None:
         start_date="2026-04-01",
         end_date="2026-04-10",
         dimensions=["query"],
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["meta"]["rows_returned"] == 1
+    assert captured["account"] == "work"
 
 
 def test_get_top_queries_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "get_top_queries_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_get_top_queries_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "dimensions": ["query"],
             "items": [],
             "meta": {"rows_returned": 0},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "get_top_queries_data",
+        fake_get_top_queries_data,
     )
 
     result = server.get_top_queries(
         site_url="sc-domain:example.com",
         start_date="2026-04-01",
         end_date="2026-04-10",
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["dimensions"] == ["query"]
+    assert captured["account"] == "work"
 
 
 def test_get_top_pages_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "get_top_pages_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_get_top_pages_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "dimensions": ["page"],
             "items": [],
             "meta": {"rows_returned": 0},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "get_top_pages_data",
+        fake_get_top_pages_data,
     )
 
     result = server.get_top_pages(
         site_url="sc-domain:example.com",
         start_date="2026-04-01",
         end_date="2026-04-10",
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["dimensions"] == ["page"]
+    assert captured["account"] == "work"
 
 
 def test_get_dimension_breakdown_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "get_dimension_breakdown_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_get_dimension_breakdown_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "dimensions": ["device"],
             "items": [],
             "meta": {"rows_returned": 0},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "get_dimension_breakdown_data",
+        fake_get_dimension_breakdown_data,
     )
 
     result = server.get_dimension_breakdown(
@@ -186,27 +263,37 @@ def test_get_dimension_breakdown_returns_wrapped_payload(monkeypatch) -> None:
         start_date="2026-04-01",
         end_date="2026-04-10",
         dimension="device",
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["dimensions"] == ["device"]
+    assert captured["account"] == "work"
 
 
 def test_inspect_url_returns_wrapped_payload(monkeypatch) -> None:
-    monkeypatch.setattr(
-        server,
-        "inspect_url_data",
-        lambda **kwargs: {
+    captured = {}
+
+    def fake_inspect_url_data(**kwargs):
+        captured.update(kwargs)
+        return {
             "site_url": "sc-domain:example.com",
             "inspection_url": "https://example.com/page",
             "result": {"verdict": "PASS"},
-        },
+        }
+
+    monkeypatch.setattr(
+        server,
+        "inspect_url_data",
+        fake_inspect_url_data,
     )
 
     result = server.inspect_url(
         site_url="sc-domain:example.com",
         inspection_url="https://example.com/page",
+        account="work",
     )
 
     assert result["ok"] is True
     assert result["result"]["verdict"] == "PASS"
+    assert captured["account"] == "work"

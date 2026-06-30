@@ -7,10 +7,13 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
+from flin_google_search_console_mcp import search_console as search_console_module
 from flin_google_search_console_mcp.search_console import (
     build_search_analytics_request,
     get_search_console_service,
     get_site_summary,
+    inspect_url,
+    list_sites,
     map_search_analytics_response,
     map_url_inspection_result,
     normalize_dimensions,
@@ -26,6 +29,16 @@ class _ExecuteCall:
 
     def execute(self) -> dict[str, Any]:
         return self._response
+
+
+@dataclass
+class FakeSitesResource:
+    response: dict[str, Any]
+    calls: int = 0
+
+    def list(self) -> _ExecuteCall:
+        self.calls += 1
+        return _ExecuteCall(self.response)
 
 
 @dataclass
@@ -58,8 +71,13 @@ class FakeUrlInspectionRoot:
 
 @dataclass
 class FakeService:
+    sites_resource: FakeSitesResource | None = None
     searchanalytics_resource: FakeSearchAnalyticsResource | None = None
     urlinspection_resource: FakeUrlInspectionResource | None = None
+
+    def sites(self) -> FakeSitesResource:
+        assert self.sites_resource is not None
+        return self.sites_resource
 
     def searchanalytics(self) -> FakeSearchAnalyticsResource:
         assert self.searchanalytics_resource is not None
@@ -257,6 +275,43 @@ def test_query_performance_calls_search_analytics_with_normalized_request() -> N
     ]
 
 
+def test_list_sites_returns_named_account_when_provided() -> None:
+    resource = FakeSitesResource(
+        response={
+            "siteEntry": [
+                {
+                    "siteUrl": "sc-domain:example.com",
+                    "permissionLevel": "siteOwner",
+                }
+            ]
+        }
+    )
+    service = FakeService(sites_resource=resource)
+
+    result = list_sites(service=service, account="work")
+
+    assert result["account"] == "work"
+    assert result["count"] == 1
+
+
+def test_query_performance_returns_named_account_when_provided() -> None:
+    resource = FakeSearchAnalyticsResource(
+        response={"rows": [], "responseAggregationType": "auto"}
+    )
+    service = FakeService(searchanalytics_resource=resource)
+
+    result = query_performance(
+        site_url="sc-domain:example.com",
+        start_date="2026-04-01",
+        end_date="2026-04-10",
+        dimensions=["date"],
+        service=service,
+        account="work",
+    )
+
+    assert result["account"] == "work"
+
+
 def test_get_search_console_service_builds_searchconsole_v1(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -294,6 +349,40 @@ def test_get_search_console_service_builds_searchconsole_v1(
     }
 
 
+def test_get_search_console_service_passes_named_account_to_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get_credentials(*, account: str | None = None) -> object:
+        captured["account"] = account
+        return "credentials"
+
+    def fake_build(
+        service_name: str,
+        version: str,
+        *,
+        credentials: object,
+        cache_discovery: bool,
+    ) -> str:
+        captured["credentials"] = credentials
+        return "service"
+
+    discovery_module = ModuleType("googleapiclient.discovery")
+    discovery_module.build = fake_build
+    googleapiclient_module = ModuleType("googleapiclient")
+    googleapiclient_module.discovery = discovery_module
+    monkeypatch.setitem(sys.modules, "googleapiclient", googleapiclient_module)
+    monkeypatch.setitem(sys.modules, "googleapiclient.discovery", discovery_module)
+    monkeypatch.setattr(search_console_module, "get_credentials", fake_get_credentials)
+
+    result = get_search_console_service(account="work")
+
+    assert result == "service"
+    assert captured["account"] == "work"
+    assert captured["credentials"] == "credentials"
+
+
 def test_map_url_inspection_result_flattens_core_fields() -> None:
     payload = {
         "inspectionResultLink": "https://search.google.com/test/inspection",
@@ -325,3 +414,17 @@ def test_map_url_inspection_result_flattens_core_fields() -> None:
     assert result["sitemaps"] == ["https://example.com/sitemap.xml"]
     assert result["referring_urls"] == ["https://example.com/internal-link"]
     assert result["rich_results"]["verdict"] == "PASS"
+
+
+def test_inspect_url_returns_named_account_when_provided() -> None:
+    resource = FakeUrlInspectionResource(response={"inspectionResult": {}})
+    service = FakeService(urlinspection_resource=resource)
+
+    result = inspect_url(
+        site_url="sc-domain:example.com",
+        inspection_url="https://example.com/page",
+        service=service,
+        account="work",
+    )
+
+    assert result["account"] == "work"

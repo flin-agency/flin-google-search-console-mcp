@@ -230,6 +230,17 @@ def _resolve_site_url_for_request(
     return resolve_site_url(site_url, settings)
 
 
+def _account_payload(account: str | None) -> dict[str, str]:
+    if account is None:
+        return {}
+
+    normalized = account.strip()
+    if not normalized:
+        return {}
+
+    return {"account": normalized}
+
+
 def build_search_analytics_request(
     *,
     start_date: str,
@@ -323,8 +334,12 @@ def map_search_analytics_response(
     }
 
 
-def get_search_console_service(*, credentials: Any | None = None) -> Any:
-    resolved_credentials = credentials or get_credentials()
+def get_search_console_service(
+    *,
+    credentials: Any | None = None,
+    account: str | None = None,
+) -> Any:
+    resolved_credentials = credentials or get_credentials(account=account)
 
     try:
         from googleapiclient.discovery import build
@@ -341,8 +356,16 @@ def get_search_console_service(*, credentials: Any | None = None) -> Any:
     )
 
 
-def list_sites(*, service: Any | None = None, credentials: Any | None = None) -> dict[str, Any]:
-    resolved_service = service or get_search_console_service(credentials=credentials)
+def list_sites(
+    *,
+    service: Any | None = None,
+    credentials: Any | None = None,
+    account: str | None = None,
+) -> dict[str, Any]:
+    resolved_service = service or get_search_console_service(
+        credentials=credentials,
+        account=account,
+    )
     response = resolved_service.sites().list().execute()
     entries = response.get("siteEntry", []) or []
 
@@ -356,6 +379,7 @@ def list_sites(*, service: Any | None = None, credentials: Any | None = None) ->
     items.sort(key=lambda item: item["site_url"])
 
     return {
+        **_account_payload(account),
         "count": len(items),
         "items": items,
     }
@@ -376,6 +400,7 @@ def query_performance(
     service: Any | None = None,
     credentials: Any | None = None,
     settings: Settings | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     resolved_site_url = _resolve_site_url_for_request(
         site_url=site_url,
@@ -393,7 +418,10 @@ def query_performance(
         filters=filters,
     )
 
-    resolved_service = service or get_search_console_service(credentials=credentials)
+    resolved_service = service or get_search_console_service(
+        credentials=credentials,
+        account=account,
+    )
     response = (
         resolved_service.searchanalytics()
         .query(siteUrl=resolved_site_url, body=request)
@@ -411,6 +439,7 @@ def query_performance(
     )
 
     return {
+        **_account_payload(account),
         "site_url": resolved_site_url,
         "start_date": request["startDate"],
         "end_date": request["endDate"],
@@ -433,6 +462,7 @@ def get_site_summary(
     service: Any | None = None,
     credentials: Any | None = None,
     settings: Settings | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     result = query_performance(
         site_url=site_url,
@@ -446,6 +476,7 @@ def get_site_summary(
         service=service,
         credentials=credentials,
         settings=settings,
+        account=account,
     )
 
     metrics = (
@@ -455,6 +486,7 @@ def get_site_summary(
     )
 
     return {
+        **_account_payload(account),
         "site_url": result["site_url"],
         "start_date": result["start_date"],
         "end_date": result["end_date"],
@@ -507,6 +539,7 @@ def inspect_url(
     service: Any | None = None,
     credentials: Any | None = None,
     settings: Settings | None = None,
+    account: str | None = None,
 ) -> dict[str, Any]:
     resolved_site_url = _resolve_site_url_for_request(
         site_url=site_url,
@@ -521,7 +554,10 @@ def inspect_url(
     if language_code and language_code.strip():
         request_body["languageCode"] = language_code.strip()
 
-    resolved_service = service or get_search_console_service(credentials=credentials)
+    resolved_service = service or get_search_console_service(
+        credentials=credentials,
+        account=account,
+    )
     response = (
         resolved_service.urlInspection()
         .index()
@@ -531,6 +567,7 @@ def inspect_url(
     inspection_result = response.get("inspectionResult", {}) or {}
 
     return {
+        **_account_payload(account),
         "site_url": resolved_site_url,
         "inspection_url": request_body["inspectionUrl"],
         "language_code": request_body.get("languageCode"),

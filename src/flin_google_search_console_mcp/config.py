@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 import os
+import re
 import sys
 
 
@@ -11,6 +12,7 @@ REQUIRED_ENV_VARS = (
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
 )
+ACCOUNT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
 class ConfigurationError(RuntimeError):
@@ -73,7 +75,25 @@ class Settings:
     client_secret: str
     default_site_url: str | None
     token_path: Path
+    token_dir: Path
     oauth_port: int
+
+
+def resolve_token_path(*, settings: Settings, account: str | None = None) -> Path:
+    if account is None:
+        return settings.token_path
+
+    normalized_account = account.strip()
+    if (
+        not normalized_account
+        or normalized_account in {".", ".."}
+        or not ACCOUNT_NAME_PATTERN.fullmatch(normalized_account)
+    ):
+        raise ConfigurationError(
+            "Invalid account name. Use only letters, numbers, underscore, hyphen, and dot."
+        )
+
+    return settings.token_dir / f"{normalized_account}.json"
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -92,6 +112,12 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         if token_override
         else default_token_path()
     )
+    token_dir_override = source.get("GOOGLE_SEARCH_CONSOLE_TOKEN_DIR")
+    token_dir = (
+        Path(token_dir_override).expanduser()
+        if token_dir_override
+        else token_path.parent
+    )
 
     default_site_url = source.get("GOOGLE_SEARCH_CONSOLE_SITE_URL")
     default_site_url = default_site_url.strip() if default_site_url else None
@@ -101,5 +127,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         client_secret=source["GOOGLE_CLIENT_SECRET"].strip(),
         default_site_url=default_site_url,
         token_path=token_path,
+        token_dir=token_dir,
         oauth_port=_parse_oauth_port(source.get("GOOGLE_SEARCH_CONSOLE_OAUTH_PORT")),
     )

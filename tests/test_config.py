@@ -10,6 +10,7 @@ from flin_google_search_console_mcp.config import (
     default_token_path,
     load_settings,
     missing_required_env_vars,
+    resolve_token_path,
 )
 
 
@@ -53,6 +54,17 @@ def test_load_settings_uses_custom_token_path(monkeypatch: pytest.MonkeyPatch) -
     settings = load_settings()
 
     assert settings.token_path == Path("/tmp/custom-token.json")
+    assert settings.token_dir == Path("/tmp")
+
+
+def test_load_settings_uses_custom_token_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("GOOGLE_SEARCH_CONSOLE_TOKEN_DIR", "/tmp/search-console-tokens")
+
+    settings = load_settings()
+
+    assert settings.token_dir == Path("/tmp/search-console-tokens")
 
 
 def test_load_settings_reads_optional_default_site(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -63,6 +75,48 @@ def test_load_settings_reads_optional_default_site(monkeypatch: pytest.MonkeyPat
     settings = load_settings()
 
     assert settings.default_site_url == "sc-domain:example.com"
+
+
+def test_resolve_token_path_uses_default_token_without_account(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("GOOGLE_SEARCH_CONSOLE_TOKEN_PATH", "/tmp/default-token.json")
+
+    settings = load_settings()
+
+    assert resolve_token_path(settings=settings, account=None) == Path(
+        "/tmp/default-token.json"
+    )
+
+
+def test_resolve_token_path_uses_named_account_token_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("GOOGLE_SEARCH_CONSOLE_TOKEN_DIR", "/tmp/search-console-tokens")
+
+    settings = load_settings()
+
+    assert resolve_token_path(settings=settings, account="work") == Path(
+        "/tmp/search-console-tokens/work.json"
+    )
+
+
+@pytest.mark.parametrize("account", ["", "  ", "../work", "work/team", ".", ".."])
+def test_resolve_token_path_rejects_unsafe_account_names(
+    monkeypatch: pytest.MonkeyPatch,
+    account: str,
+) -> None:
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+
+    settings = load_settings()
+
+    with pytest.raises(ConfigurationError):
+        resolve_token_path(settings=settings, account=account)
 
 
 def test_load_settings_rejects_invalid_oauth_port(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -93,6 +147,7 @@ def clear_related_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "GOOGLE_CLIENT_SECRET",
         "GOOGLE_SEARCH_CONSOLE_SITE_URL",
         "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH",
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_DIR",
         "GOOGLE_SEARCH_CONSOLE_OAUTH_PORT",
     ):
         monkeypatch.delenv(key, raising=False)

@@ -6,7 +6,7 @@ import json
 import os
 import tempfile
 
-from .config import Settings, load_settings
+from .config import Settings, load_settings, resolve_token_path
 
 
 SEARCH_CONSOLE_SCOPES = (
@@ -138,17 +138,19 @@ def save_credentials(credentials: Any, token_path: Path) -> None:
 def get_credentials(
     *,
     settings: Settings | None = None,
+    account: str | None = None,
     interactive: bool = True,
 ) -> Any:
     resolved_settings = settings or load_settings()
+    token_path = resolve_token_path(settings=resolved_settings, account=account)
 
     try:
-        info = _load_token_info(resolved_settings.token_path)
+        info = _load_token_info(token_path)
     except AuthenticationRequiredError:
         if not interactive:
             raise
         credentials = _run_installed_app_flow(resolved_settings)
-        save_credentials(credentials, resolved_settings.token_path)
+        save_credentials(credentials, token_path)
         return credentials
 
     credentials = _build_credentials_from_info(info, SEARCH_CONSOLE_SCOPES)
@@ -168,7 +170,7 @@ def get_credentials(
                 ) from exc
             credentials = _run_installed_app_flow(resolved_settings)
 
-        save_credentials(credentials, resolved_settings.token_path)
+        save_credentials(credentials, token_path)
         return credentials
 
     if not interactive:
@@ -177,13 +179,17 @@ def get_credentials(
         )
 
     credentials = _run_installed_app_flow(resolved_settings)
-    save_credentials(credentials, resolved_settings.token_path)
+    save_credentials(credentials, token_path)
     return credentials
 
 
-def describe_auth_state(*, settings: Settings | None = None) -> dict[str, Any]:
+def describe_auth_state(
+    *,
+    settings: Settings | None = None,
+    account: str | None = None,
+) -> dict[str, Any]:
     resolved_settings = settings or load_settings()
-    token_path = resolved_settings.token_path
+    token_path = resolve_token_path(settings=resolved_settings, account=account)
 
     if not token_path.exists():
         return {
