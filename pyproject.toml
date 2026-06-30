@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flin-google-search-console-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Read-only MCP server for Google Search Console performance and URL inspection."
 readme = "README.md"
 requires-python = ">=3.10"

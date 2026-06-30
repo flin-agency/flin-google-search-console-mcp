@@ -80,7 +80,7 @@ def _run_installed_app_flow(settings: Settings) -> Any:
         port=settings.oauth_port,
         open_browser=True,
         access_type="offline",
-        prompt="consent",
+        prompt="consent select_account",
         authorization_prompt_message="",
         success_message=(
             "Google Search Console authorization complete. You can close this tab and return to Claude Desktop."

@@ -214,6 +214,7 @@ def test_run_installed_app_flow_suppresses_stdout_authorization_prompt(
 
     assert result == "credentials"
     assert captured["scopes"] == auth.SEARCH_CONSOLE_SCOPES
+    assert captured["kwargs"]["prompt"] == "consent select_account"
     assert captured["kwargs"]["authorization_prompt_message"] == ""
 
 
