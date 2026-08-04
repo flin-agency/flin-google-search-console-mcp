@@ -30,12 +30,14 @@ Expected: FAIL because the current requirement is `mcp>=1.6.0`.
 
 **Files:**
 - Modify: `pyproject.toml`
+- Modify: `src/flin_google_search_console_mcp/__init__.py`
 - Modify: `uv.lock`
 
 **Step 1: Make the minimal metadata change**
 
 Set the project version to `0.1.3` and change the dependency to
-`mcp>=1.6.0,<2`.
+`mcp>=1.6.0,<2`. Update the package's public `__version__` to the same release
+version.
 
 **Step 2: Regenerate the lockfile**
 

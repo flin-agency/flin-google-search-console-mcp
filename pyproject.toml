@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flin-google-search-console-mcp"
-version = "0.1.2"
+version = "0.1.3"
 description = "Read-only MCP server for Google Search Console performance and URL inspection."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["mcp", "google-search-console", "search-console", "model-context-protocol", "claude"]
 dependencies = [
-  "mcp>=1.6.0",
+  "mcp>=1.6.0,<2",
   "google-api-python-client>=2.170.0",
   "google-auth>=2.40.0",
   "google-auth-oauthlib>=1.2.0",
