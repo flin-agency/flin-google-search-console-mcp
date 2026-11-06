@@ -21,7 +21,7 @@ class ConfigurationError(RuntimeError):
 
 def missing_required_env_vars(env: Mapping[str, str] | None = None) -> list[str]:
     source = os.environ if env is None else env
-    return [key for key in REQUIRED_ENV_VARS if not source.get(key)]
+    return [key for key in REQUIRED_ENV_VARS if not source.get(key, "").strip()]
 
 
 def default_token_path(
@@ -93,7 +93,22 @@ def resolve_token_path(*, settings: Settings, account: str | None = None) -> Pat
             "Invalid account name. Use only letters, numbers, underscore, hyphen, and dot."
         )
 
-    return settings.token_dir / f"{normalized_account}.json"
+    token_path = settings.token_dir / f"{normalized_account}.json"
+    # Compare case-insensitively as well: macOS and Windows commonly use
+    # case-insensitive filesystems, including before either file exists.
+    aliases_default = (
+        str(token_path.resolve()).casefold()
+        == str(settings.token_path.resolve()).casefold()
+    )
+    if not aliases_default and token_path.exists() and settings.token_path.exists():
+        aliases_default = token_path.samefile(settings.token_path)
+    if aliases_default:
+        raise ConfigurationError(
+            "This account name conflicts with the default token file. "
+            "Omit account to use the default account, or choose a different name."
+        )
+
+    return token_path
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:

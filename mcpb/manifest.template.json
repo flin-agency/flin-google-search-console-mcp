@@ -1,0 +1,75 @@
+{
+  "manifest_version": "0.4",
+  "name": "flin-google-search-console-mcp",
+  "display_name": "flin Search Console",
+  "description": "Analyse Google Search Console performance and inspect URLs with read-only access.",
+  "long_description": "Connect your Google account to explore clicks, impressions, queries, pages and indexing status in Claude Desktop. A Google Cloud Desktop OAuth client with the Search Console API enabled is required. Google sign-in opens in your browser on the first data request. OAuth tokens are stored locally; requests go to Google and results return to Claude. This extension exposes no Search Console write operations.",
+  "author": { "name": "flin GmbH", "email": "flin@flin.agency", "url": "https://flin.agency" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flin-agency/flin-google-search-console-mcp.git"
+  },
+  "homepage": "https://github.com/flin-agency/flin-google-search-console-mcp",
+  "documentation": "https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/README.md",
+  "support": "https://github.com/flin-agency/flin-google-search-console-mcp/issues",
+  "privacy_policies": [
+    "https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/PRIVACY.md",
+    "https://policies.google.com/privacy"
+  ],
+  "icon": "icon.png",
+  "server": {
+    "type": "uv",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run", "--directory", "${__dirname}",
+        "--locked", "--no-dev", "--python", "3.12",
+        "${__dirname}/server.py"
+      ],
+      "env": {
+        "GOOGLE_CLIENT_ID": "${user_config.google_client_id}",
+        "GOOGLE_CLIENT_SECRET": "${user_config.google_client_secret}",
+        "GOOGLE_SEARCH_CONSOLE_SITE_URL": "${user_config.default_site_url}"
+      }
+    }
+  },
+  "user_config": {
+    "google_client_id": {
+      "type": "string",
+      "title": "Google OAuth Client ID",
+      "description": "Client ID from your Google Cloud OAuth client of type Desktop app.",
+      "required": true
+    },
+    "google_client_secret": {
+      "type": "string",
+      "title": "Google OAuth Client Secret",
+      "description": "Client secret belonging to the same Desktop app OAuth client.",
+      "sensitive": true,
+      "required": true
+    },
+    "default_site_url": {
+      "type": "string",
+      "title": "Default Search Console property (optional)",
+      "description": "For example sc-domain:example.com or https://www.example.com/. You can also choose a property in each request.",
+      "default": "",
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "health_check", "description": "Check configuration and sign-in status." },
+    { "name": "list_sites", "description": "List accessible Search Console properties." },
+    { "name": "get_site_summary", "description": "Summarise clicks, impressions, CTR and position." },
+    { "name": "query_performance", "description": "Query performance with dimensions and filters." },
+    { "name": "get_top_queries", "description": "Find the top search queries." },
+    { "name": "get_top_pages", "description": "Find the top pages." },
+    { "name": "get_dimension_breakdown", "description": "Break down performance by one dimension." },
+    { "name": "inspect_url", "description": "Inspect Google's indexed status for a URL." }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": { "python": ">=3.12 <3.13" }
+  },
+  "keywords": ["google", "search-console", "seo", "analytics"],
+  "license": "MIT"
+}

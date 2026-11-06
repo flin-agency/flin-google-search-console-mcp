@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "flin-search-console": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run", "--directory", "${CLAUDE_PLUGIN_ROOT}/runtime",
+        "--locked", "--no-dev", "--python", "3.12",
+        "${CLAUDE_PLUGIN_ROOT}/runtime/server.py"
+      ],
+      "env": {
+        "GOOGLE_CLIENT_ID": "${user_config.google_client_id}",
+        "GOOGLE_CLIENT_SECRET": "${user_config.google_client_secret}",
+        "GOOGLE_SEARCH_CONSOLE_SITE_URL": "${user_config.default_site_url}",
+        "UV_PROJECT_ENVIRONMENT": "${CLAUDE_PLUGIN_DATA}/venv"
+      }
+    }
+  }
+}

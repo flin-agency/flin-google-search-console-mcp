@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
 import os
 
 import pytest
@@ -105,6 +106,57 @@ def test_resolve_token_path_uses_named_account_token_dir(
     )
 
 
+@pytest.mark.parametrize(
+    ("filename", "account"),
+    [("token.json", "token"), ("token.json", " TOKEN "), ("personal.json", "Personal")],
+)
+def test_named_accounts_cannot_alias_default_token(tmp_path, filename, account) -> None:
+    settings = load_settings({
+        "GOOGLE_CLIENT_ID": "client-id",
+        "GOOGLE_CLIENT_SECRET": "client-secret",
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH": str(tmp_path / filename),
+    })
+
+    with pytest.raises(ConfigurationError, match="conflicts with the default"):
+        resolve_token_path(settings=settings, account=account)
+
+
+def test_named_account_can_use_same_filename_in_separate_directory(tmp_path) -> None:
+    settings = load_settings({
+        "GOOGLE_CLIENT_ID": "client-id",
+        "GOOGLE_CLIENT_SECRET": "client-secret",
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH": str(tmp_path / "token.json"),
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_DIR": str(tmp_path / "accounts"),
+    })
+
+    assert resolve_token_path(settings=settings, account="token") == (
+        tmp_path / "accounts" / "token.json"
+    )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="link semantics differ on Windows")
+@pytest.mark.parametrize("link_type", ["symlink", "hardlink", "directory_symlink"])
+def test_named_accounts_reject_filesystem_aliases_of_default_token(tmp_path, link_type) -> None:
+    settings = load_settings({
+        "GOOGLE_CLIENT_ID": "client-id",
+        "GOOGLE_CLIENT_SECRET": "client-secret",
+        "GOOGLE_SEARCH_CONSOLE_TOKEN_PATH": str(tmp_path / "token.json"),
+    })
+    settings.token_path.write_text('{"token":"default"}', encoding="utf-8")
+    account = "work"
+    if link_type == "symlink":
+        (tmp_path / "work.json").symlink_to(settings.token_path)
+    elif link_type == "hardlink":
+        os.link(settings.token_path, tmp_path / "work.json")
+    else:
+        (tmp_path / "alias").symlink_to(tmp_path, target_is_directory=True)
+        settings = replace(settings, token_dir=tmp_path / "alias")
+        account = "token"
+
+    with pytest.raises(ConfigurationError, match="conflicts with the default"):
+        resolve_token_path(settings=settings, account=account)
+
+
 @pytest.mark.parametrize("account", ["", "  ", "../work", "work/team", ".", ".."])
 def test_resolve_token_path_rejects_unsafe_account_names(
     monkeypatch: pytest.MonkeyPatch,
@@ -153,3 +205,10 @@ def clear_related_env(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(key, raising=False)
 
     os.environ.pop("GOOGLE_CLIENT_ID", None)
+
+
+@pytest.mark.parametrize("value", ["", " ", "\t\n"])
+def test_blank_oauth_settings_are_missing(value):
+    assert missing_required_env_vars({"GOOGLE_CLIENT_ID": value, "GOOGLE_CLIENT_SECRET": value}) == [
+        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
+    ]

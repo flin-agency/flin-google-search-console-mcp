@@ -1,8 +1,112 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+import asyncio
+
+from googleapiclient.errors import HttpError
+from httplib2 import Response
+from mcp.shared.memory import create_connected_server_and_client_session
+import pytest
 
 from flin_google_search_console_mcp import server
+
+
+def test_mcp_advertises_read_only_annotations() -> None:
+    async def list_tools():
+        async with create_connected_server_and_client_session(server.mcp) as client:
+            response = await client.list_tools()
+            assert len(response.tools) == 8
+            for tool in response.tools:
+                assert tool.annotations is not None
+                assert tool.annotations.title
+                assert tool.annotations.readOnlyHint is True
+                assert tool.annotations.destructiveHint is False
+                assert tool.annotations.idempotentHint is True
+                assert tool.annotations.openWorldHint is (tool.name != "health_check")
+
+    asyncio.run(list_tools())
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "backend_name", "arguments"),
+    [
+        ("health_check", "load_settings", {}),
+        ("list_sites", "list_sites_data", {}),
+        ("get_site_summary", "get_site_summary_data", {"start_date": "2026-04-01", "end_date": "2026-04-10"}),
+        ("query_performance", "query_performance_data", {"start_date": "2026-04-01", "end_date": "2026-04-10"}),
+        ("get_top_queries", "get_top_queries_data", {"start_date": "2026-04-01", "end_date": "2026-04-10"}),
+        ("get_top_pages", "get_top_pages_data", {"start_date": "2026-04-01", "end_date": "2026-04-10"}),
+        ("get_dimension_breakdown", "get_dimension_breakdown_data", {"start_date": "2026-04-01", "end_date": "2026-04-10", "dimension": "device"}),
+        ("inspect_url", "inspect_url_data", {"inspection_url": "https://example.com/"}),
+    ],
+)
+def test_all_tools_raise_sanitized_errors(monkeypatch, tool_name, backend_name, arguments) -> None:
+    def fail(**kwargs):
+        raise PermissionError(13, "private details", "/private/user/token.json")
+
+    monkeypatch.setattr(server, "missing_required_env_vars", lambda: [])
+    monkeypatch.setattr(server, backend_name, fail)
+
+    with pytest.raises(server.ToolError, match="io_error") as error:
+        getattr(server, tool_name)(**arguments)
+
+    assert "private" not in str(error.value)
+    assert "token.json" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (server.ConfigurationError("sensitive-marker"), "invalid_configuration"),
+        (server.AuthenticationRequiredError("sensitive-marker"), "oauth_required"),
+        (server.AuthenticationError("sensitive-marker"), "authentication_failed"),
+        (ValueError("sensitive-marker"), "invalid_arguments"),
+        (TimeoutError("sensitive-marker"), "request_timeout"),
+        (RuntimeError("sensitive-marker"), "internal_error"),
+    ] + [
+        (HttpError(
+            Response({"status": str(status)}),
+            b'{"error":{"message":"sensitive-marker"}}',
+            uri="https://example.com/private?access_token=sensitive-marker",
+        ), code)
+        for status, code in [
+            (400, "google_request_failed"), (401, "oauth_required"),
+            (403, "permission_denied"), (429, "quota_exceeded"),
+            (503, "service_unavailable"),
+        ]
+    ],
+)
+def test_mcp_reports_sanitized_failures_as_errors(monkeypatch, caplog, error, code) -> None:
+    def fail(**kwargs):
+        raise error
+
+    monkeypatch.setattr(server, "list_sites_data", fail)
+
+    async def call_tool():
+        async with create_connected_server_and_client_session(server.mcp) as client:
+            result = await client.call_tool("list_sites", {})
+            assert result.isError is True
+            assert code in result.content[0].text
+            assert "sensitive-marker" not in result.model_dump_json()
+
+    asyncio.run(call_tool())
+    assert "sensitive-marker" not in caplog.text
+
+
+def test_mcp_preserves_successful_results_and_health_diagnostics(monkeypatch) -> None:
+    monkeypatch.setattr(server, "list_sites_data", lambda **kwargs: {"count": 0, "items": []})
+    monkeypatch.setattr(server, "missing_required_env_vars", lambda: ["GOOGLE_CLIENT_ID"])
+
+    async def call_tools():
+        async with create_connected_server_and_client_session(server.mcp) as client:
+            result = await client.call_tool("list_sites", {})
+            assert result.isError is False
+            assert result.structuredContent == {"ok": True, "count": 0, "items": []}
+            health = await client.call_tool("health_check", {})
+            assert health.isError is False
+            assert health.structuredContent["status"] == "missing_configuration"
+
+    asyncio.run(call_tools())
 
 
 def test_health_check_reports_missing_configuration(monkeypatch) -> None:

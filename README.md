@@ -2,6 +2,21 @@
 
 Read-only MCP server for Google Search Console, built to work well in Claude Desktop with a browser-based OAuth flow and local token storage.
 
+For the prepared **Claude Code plugin**, see [plugin/README.md](plugin/README.md).
+It requires Claude Code's secret configuration prompts and is separate from the
+desktop extension below. Directory submission is prepared, not yet approved.
+
+## Privacy Policy
+
+See [PRIVACY.md](PRIVACY.md) for data flows, storage, retention and deletion.
+The server sends requests to Google and returns results to your MCP client. It
+does not send Search Console data to flin GmbH. OAuth tokens are stored as local
+JSON files and are not encrypted by the server. Sensitive client settings in Claude
+and the server's token files are separate storage mechanisms.
+
+Publisher: flin GmbH, Weinbergstrasse 31, 8006 Zürich, Switzerland.
+Privacy and security contact: flin@flin.agency. See [SUPPORT.md](SUPPORT.md).
+
 ## Claude Desktop Quickstart
 
 If your goal is simply "make this work in Claude Desktop", follow these steps in order.
@@ -64,7 +79,31 @@ You do not need to manually wire redirect URIs into Claude Desktop for this MCP.
 
 ### 5) Add the MCP to Claude Desktop
 
-The minimum Claude Desktop configuration is:
+#### Recommended: desktop extension
+
+Download `flin-google-search-console-mcp-<version>.mcpb` from the
+[GitHub releases](https://github.com/flin-agency/flin-google-search-console-mcp/releases)
+and open it in a current Claude Desktop version with MCPB UV runtime support.
+Alternatively, use **Install Extension** in the desktop extension settings.
+
+Enter the Google OAuth client ID and client secret from step 4 and, optionally,
+a default property such as `sc-domain:example.com`. The secret field is marked
+sensitive. Continue with the login instructions below. Manual JSON editing is
+not required; the Google Cloud setup in steps 1–4 is still required.
+
+The extension runs locally on macOS and Windows. Claude's UV runtime manages
+Python and installs the dependencies from the included lockfile. First startup
+requires internet access. The bundle contains no credentials or saved tokens.
+
+To update, download and install the new `.mcpb`. Each bundle contains a specific
+server version and does not fetch newer server code with `@latest`. Saved tokens
+remain outside the extension directory. When switching from manual installation,
+use the same OAuth client and disable the old entry after verifying the extension
+to avoid duplicate tools.
+
+#### Alternative: manual configuration
+
+The existing PyPI installation remains available. Its minimum configuration is:
 
 ```json
 {
@@ -151,6 +190,10 @@ After that:
 
 The MCP stores a local token JSON file after the first successful login.
 
+New token directories are created with private permissions. Existing directories keep
+their permissions; on macOS and Linux, they must belong to the current user and
+must not be writable by other users. Token files are written with owner-only access.
+
 Default locations:
 
 - macOS: `~/Library/Application Support/flin-google-search-console-mcp/token.json`
@@ -209,6 +252,10 @@ Then pass `account` in tool calls:
 ```
 
 The first call for a new account opens the OAuth browser flow and stores a separate token, for example `work.json`. Account names may contain only letters, numbers, `_`, `-`, and `.`.
+
+An account name must not resolve to the default token file, including case variants
+or filesystem aliases. With the default storage layout, `token` is reserved. Omit
+`account` to use the default account. Existing named account files remain supported.
 
 ## First Prompts To Verify Everything Works
 
@@ -371,7 +418,7 @@ If you want to run the MCP from source:
 uv sync --extra dev
 cp .env.example .env
 # Fill .env values
-uv run flin-google-search-console-mcp
+uv run --env-file .env flin-google-search-console-mcp
 ```
 
 ## Published Package
@@ -408,11 +455,21 @@ Google shows an unverified or testing warning
 - this is usually expected while the app is in testing mode
 - make sure your Google account is added as a test user on the OAuth consent screen
 
+## Security
+
+See [the security review](docs/security-review.md) for checks, fixes and remaining
+limitations. Tokens must be private files (0600 on macOS/Linux); legacy token
+files with broader permissions must be restricted before use. The extension
+is unsigned; SHA256SUMS verifies download integrity, not publisher identity.
+
 ## More Docs
 
 - [Operational guide](docs/mcp-usage-guide.md)
 - [Testing guide](docs/testing.md)
 - [Release checklist](docs/release.md)
+- [Desktop extension guide](docs/desktop-extension.md)
+- [Directory submission preparation](docs/directory-submission.md)
+- [Directory reviewer tests](docs/directory-review-tests.md)
 
 ## Release on GitHub + PyPI
 
@@ -421,7 +478,21 @@ This repository publishes automatically with GitHub Actions:
 - CI: `.github/workflows/ci.yml`
 - Release: `.github/workflows/release.yml` triggered by git tags `v*`
 
-### 1) Configure PyPI Trusted Publisher
+CI tests the Python package, desktop bundle and Claude Code plugin on Linux,
+macOS and Windows. It also checks the plugin manifest and rejects stale copies
+of the runtime in `plugin/`. A release tag builds all formats and creates a
+GitHub Release with the `.mcpb`, plugin ZIP,
+their checksums and Python distributions. Only Python distributions go to PyPI.
+
+A manual workflow run on a branch only validates and builds downloadable
+workflow artifacts. Publishing requires a version tag matching the project,
+package, plugin and lockfile versions. Publishing a directory listing requires
+the separate process described in the [submission guide](docs/directory-submission.md).
+
+PyPI publication is optional: manually run the Release workflow on the version
+tag with `publish_pypi` enabled. It is independent of the GitHub download.
+
+### 1) Configure PyPI Trusted Publisher (optional)
 
 In PyPI project settings for `flin-google-search-console-mcp`, add a Trusted Publisher with:
 
@@ -432,9 +503,10 @@ In PyPI project settings for `flin-google-search-console-mcp`, add a Trusted Pub
 
 ### 2) Cut a release
 
+Follow the [release checklist](docs/release.md), commit and push the reviewed
+changes, then tag the prepared version:
+
 ```bash
-git add -A
-git commit -m "release: v0.1.0"
-git tag v0.1.0
-git push origin main --tags
+git tag v0.1.5
+git push origin v0.1.5
 ```

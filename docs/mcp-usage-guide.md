@@ -45,6 +45,23 @@ Use this guide when operating `flin-google-search-console-mcp` from Claude or MC
 
 ## Common error handling
 
+Failed tool calls return an MCP error (`isError: true`) with a stable error code
+and a sanitized message. Raw Google responses, credentials, and local paths are
+not included. Successful data responses keep their `ok: true` JSON payload.
+`health_check` can successfully report an unready state (`ok: false`) without
+being a failed tool call.
+
+`invalid_configuration`:
+
+- check the OAuth configuration and account name
+- omit `account` for the default account; named accounts cannot alias its token file
+
+`authentication_failed` / `io_error`:
+
+- check saved credentials and token storage permissions
+- use a token directory owned by you that other users cannot write to
+- existing directory permissions are never changed automatically
+
 `missing_configuration`:
 
 - `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` is missing

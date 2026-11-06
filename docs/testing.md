@@ -1,5 +1,24 @@
 # Testing Guide
 
+## Claude Code plugin
+
+After editing the server, root README, privacy policy, support file or icon, run
+`uv run --locked python scripts/build_plugin.py --sync`. Commit the generated
+`plugin/runtime/` files and copied documents together with their source changes.
+CI runs `--check` to reject stale copies; the directory reads these files directly.
+Plugin-only configuration and README changes are made directly in `plugin/`.
+
+Run the pinned official validator with
+`node node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs plugin validate plugin --strict`
+after `npm ci --ignore-scripts`. The wrapper invokes the platform binary installed
+as an optional dependency, without needing npm install scripts or a global upgrade.
+
+Build with `uv run --locked python scripts/build_plugin.py` and test the ZIP with
+`uv run --locked python scripts/check_plugin.py dist/plugin`. The smoke test
+uses dummy credentials, an isolated token location and a path containing spaces.
+It also verifies that the plugin's virtual environment lives outside its source.
+For the final live test, use [directory-review-tests.md](directory-review-tests.md).
+
 This guide covers how to test `flin-google-search-console-mcp` from zero to production confidence.
 
 ## Test levels
@@ -14,11 +33,24 @@ This guide covers how to test `flin-google-search-console-mcp` from zero to prod
 Run these first on every change:
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 python3 -m pytest
 python3 -m compileall src
 uv build
 ```
+
+Desktop bundle validation additionally requires Node.js from `.nvmrc`:
+
+```bash
+npm ci --ignore-scripts
+uv run --locked python scripts/build_mcpb.py
+uv run --locked python scripts/check_mcpb.py dist/mcpb
+```
+
+This validates the manifest, extracts and starts the bundle, and checks the MCP
+handshake and tools using dummy credentials. It never opens OAuth or reads
+existing Google tokens. CI runs these checks on Linux, macOS and Windows. A real
+Claude Desktop installation and Google sign-in remain manual release checks.
 
 What this validates:
 

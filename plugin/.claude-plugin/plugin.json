@@ -1,0 +1,38 @@
+{
+  "name": "flin-search-console",
+  "displayName": "flin Search Console",
+  "version": "0.1.5",
+  "description": "Read Google Search Console performance and URL indexing status in Claude Code. Requires your own Google Desktop OAuth client.",
+  "author": { "name": "flin GmbH", "email": "flin@flin.agency", "url": "https://flin.agency" },
+  "homepage": "https://github.com/flin-agency/flin-google-search-console-mcp",
+  "repository": "https://github.com/flin-agency/flin-google-search-console-mcp",
+  "license": "MIT",
+  "keywords": ["search-console", "seo", "analytics", "read-only"],
+  "icon": "./icon.svg",
+  "documentationUrl": "https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/plugin/README.md",
+  "supportUrl": "https://github.com/flin-agency/flin-google-search-console-mcp/issues",
+  "privacyPolicyUrl": "https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/PRIVACY.md",
+  "userConfig": {
+    "google_client_id": {
+      "type": "string",
+      "title": "Google OAuth Client ID",
+      "description": "Client ID of your Google Cloud OAuth client of type Desktop app.",
+      "required": true,
+      "sensitive": true
+    },
+    "google_client_secret": {
+      "type": "string",
+      "title": "Google OAuth Client Secret",
+      "description": "Client secret for the same Desktop app OAuth client. Enter it here, never in chat.",
+      "required": true,
+      "sensitive": true
+    },
+    "default_site_url": {
+      "type": "string",
+      "title": "Default Search Console property (optional)",
+      "description": "An exact property identifier, for example sc-domain:example.com. Leave empty to choose per request.",
+      "required": false,
+      "default": ""
+    }
+  }
+}

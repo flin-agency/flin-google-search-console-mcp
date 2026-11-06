@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 import json
 import os
+import stat
 import tempfile
 
 from .config import Settings, load_settings, resolve_token_path
@@ -24,10 +25,30 @@ class AuthenticationRequiredError(AuthenticationError):
 
 def _load_token_info(token_path: Path) -> dict[str, Any]:
     try:
-        return json.loads(token_path.read_text(encoding="utf-8"))
+        _validate_token_dir(token_path.parent)
+        if token_path.is_symlink():
+            raise AuthenticationError("Refusing to read a symlinked token file.")
+        # O_NONBLOCK also prevents a substituted FIFO from hanging the server.
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        fd = os.open(token_path, flags)
+        with os.fdopen(fd, "r", encoding="utf-8") as handle:
+            file_stat = os.fstat(handle.fileno())
+            if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
+                raise AuthenticationError("Token storage must be a regular, unlinked file.")
+            if os.name != "nt" and (
+                file_stat.st_uid != os.getuid() or file_stat.st_mode & 0o077
+            ):
+                raise AuthenticationError("Token files must be owned by you with owner-only permissions (0600).")
+            content = handle.read(65537)
+            if len(content) > 65536:
+                raise AuthenticationError("Token file exceeds the size limit.")
+            info = json.loads(content)
+            if not isinstance(info, dict):
+                raise AuthenticationError("Token file must contain a JSON object.")
+            return info
     except FileNotFoundError as exc:
         raise AuthenticationRequiredError("No token file found.") from exc
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise AuthenticationError("Token file is not valid JSON.") from exc
 
 
@@ -75,9 +96,13 @@ def _run_installed_app_flow(settings: Settings) -> Any:
             "redirect_uris": ["http://localhost"],
         }
     }
-    flow = InstalledAppFlow.from_client_config(client_config, SEARCH_CONSOLE_SCOPES)
+    flow = InstalledAppFlow.from_client_config(
+        client_config, SEARCH_CONSOLE_SCOPES, autogenerate_code_verifier=True,
+    )
     return flow.run_local_server(
+        host="127.0.0.1",
         port=settings.oauth_port,
+        timeout_seconds=300,
         open_browser=True,
         access_type="offline",
         prompt="consent select_account",
@@ -88,16 +113,31 @@ def _run_installed_app_flow(settings: Settings) -> Any:
     )
 
 
-def _ensure_private_token_dir(token_path: Path) -> None:
-    token_dir = token_path.parent
+def _validate_token_dir(token_dir: Path) -> None:
     if token_dir.is_symlink():
         raise AuthenticationError(
             "Refusing to store credentials in a symlinked directory."
         )
 
-    token_dir.mkdir(parents=True, exist_ok=True)
+    directory_stat = token_dir.lstat()
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        raise AuthenticationError("Token storage must be a regular directory.")
     if os.name != "nt":
-        os.chmod(token_dir, 0o700)
+        # Never chmod a caller-provided existing directory. It may be shared
+        # with other applications; only newly created storage is private by default.
+        if directory_stat.st_uid != os.getuid() or directory_stat.st_mode & 0o022:
+            raise AuthenticationError(
+                "Token storage must be owned by the current user and must not "
+                "be writable by other users. Choose a dedicated private directory."
+            )
+
+
+def _ensure_private_token_dir(token_path: Path) -> None:
+    try:
+        token_path.parent.mkdir(mode=0o700, parents=True)
+    except FileExistsError:
+        pass
+    _validate_token_dir(token_path.parent)
 
 
 def _write_credentials_atomically(token_json: str, token_path: Path) -> None:
@@ -121,8 +161,6 @@ def _write_credentials_atomically(token_json: str, token_path: Path) -> None:
             os.fsync(handle.fileno())
 
         os.replace(tmp_path, token_path)
-        if os.name != "nt":
-            os.chmod(token_path, 0o600)
     finally:
         try:
             tmp_path.unlink()
@@ -191,15 +229,11 @@ def describe_auth_state(
     resolved_settings = settings or load_settings()
     token_path = resolve_token_path(settings=resolved_settings, account=account)
 
-    if not token_path.exists():
-        return {
-            "status": "oauth_required",
-            "has_token_file": False,
-        }
-
     try:
         info = _load_token_info(token_path)
         credentials = _build_credentials_from_info(info, SEARCH_CONSOLE_SCOPES)
+    except AuthenticationRequiredError:
+        return {"status": "oauth_required", "has_token_file": False}
     except AuthenticationError as exc:
         return {
             "status": "invalid_token_file",
