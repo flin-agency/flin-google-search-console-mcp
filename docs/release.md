@@ -26,7 +26,7 @@ uv run --locked python scripts/build_plugin.py --sync
 uv run --locked python -m pytest
 node node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs plugin validate plugin --strict
 uv build --out-dir dist/python
-uv run --locked python scripts/build_mcpb.py --tag v0.1.6
+uv run --locked python scripts/build_mcpb.py --tag v0.1.7
 uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
 uv run --locked python scripts/check_updates.py
 uv run --locked python scripts/check_plugin.py dist/plugin
@@ -37,8 +37,8 @@ uv run --locked python scripts/check_plugin.py dist/plugin
 5. Commit, push, then tag the matching version:
 
 ```bash
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
 ## Workflow

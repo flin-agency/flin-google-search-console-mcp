@@ -45,6 +45,7 @@ def test_bundle_excludes_credentials_and_development_files(bundle_source: Path, 
     assert args[:2] == ["tool", "run"]
     assert args[args.index("--from") + 1] == "flin-google-search-console-mcp@latest"
     assert args[args.index("--prerelease") + 1] == "disallow"
+    assert args[args.index("--refresh-package") + 1] == "flin-google-search-console-mcp"
     assert args[args.index("--default-index") + 1] == "https://pypi.org/simple"
     assert manifest["tools_generated"] is True
     assert not (staging / "src").exists()

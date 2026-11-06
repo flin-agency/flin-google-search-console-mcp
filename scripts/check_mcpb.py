@@ -35,7 +35,9 @@ async def verify_server(parameters: StdioServerParameters, expected_version: str
             health = await client.call_tool("health_check", {})
             assert not health.isError
             if expected_version:
-                assert health.structuredContent["server_version"] == expected_version
+                assert health.structuredContent.get("server_version") == expected_version, (
+                    f"Expected server {expected_version}, got {health.structuredContent.get('server_version', 'older server without version reporting')} or delayed PyPI index propagation"
+                )
             assert health.structuredContent["status"] == "oauth_required"
             assert health.structuredContent["default_site_url"] == "sc-domain:example.com"
             failure = await client.call_tool("query_performance", {

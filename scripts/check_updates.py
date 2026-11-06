@@ -22,6 +22,16 @@ MODULE = "flin_google_search_console_mcp"
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Fixture updates happen within one second; avoid coarse mtime-based 304s.
+        if "If-Modified-Since" in self.headers:
+            del self.headers["If-Modified-Since"]
+        super().do_GET()
+
+    def end_headers(self):
+        self.send_header("Cache-Control", "public, max-age=86400")
+        super().end_headers()
+
     def log_message(self, *_args):
         pass
 

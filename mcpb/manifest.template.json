@@ -37,6 +37,8 @@
         "https://pypi.org/simple",
         "--prerelease",
         "disallow",
+        "--refresh-package",
+        "flin-google-search-console-mcp",
         "--from",
         "flin-google-search-console-mcp@latest",
         "python",

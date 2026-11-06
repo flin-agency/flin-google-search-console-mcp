@@ -157,7 +157,14 @@ jobs:
       - name: Verify launcher against the published PyPI version
         run: |
           uv sync --locked --extra dev
-          uv run --locked python scripts/check_mcpb.py release-assets
+          # Allow bounded propagation time for a just-published PyPI version.
+          for attempt in 1 2 3 4 5 6; do
+            if uv run --locked python scripts/check_mcpb.py release-assets; then
+              break
+            fi
+            if [ "$attempt" = 6 ]; then exit 1; fi
+            sleep 10
+          done
 
       - name: Create release with installation downloads
         env:

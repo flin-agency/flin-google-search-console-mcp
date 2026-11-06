@@ -16,7 +16,8 @@ runtime. The server comes from PyPI and updates at every server start.
 ## Automatic server updates
 
 The manifest invokes `uv tool run --from flin-google-search-console-mcp@latest`
-with Python 3.12, the HTTPS PyPI index and prereleases disabled. uv checks for a
+with Python 3.12, the HTTPS PyPI index and prereleases disabled. From 0.1.7,
+`--refresh-package` also explicitly revalidates the server package index cache. uv checks for a
 new release on every start, even when an older tool environment is cached.
 Packages are cached to avoid unnecessary downloads. Restart Claude after a new
 release to use it. Active sessions keep their current server until restarted;
