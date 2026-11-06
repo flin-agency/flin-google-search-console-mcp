@@ -1,6 +1,6 @@
 # Release checklist
 
-Version tags publish to **PyPI and GitHub**. From 0.1.6, installed desktop
+Version tags publish to **PyPI and GitHub**. From 0.1.7, installed desktop
 launchers load the latest compatible stable PyPI server on their next start.
 Do not publish a server release until it is ready to reach existing users.
 
@@ -55,7 +55,7 @@ git push origin v0.1.7
   to overwrite a published version. Correct faulty releases with a new version.
 
 Verify the PyPI version, GitHub assets and downloaded checksum after publication.
-Normal server updates need only a Claude restart. Users on 0.1.5 or earlier need
+Normal server updates need only a Claude restart. Users on 0.1.6 or earlier need
 one initial launcher upgrade; changes to the extension manifest or required
 Python version can still require a new installer. Private extension manifests
 do not update themselves from GitHub.

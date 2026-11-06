@@ -1,7 +1,7 @@
 # Claude Desktop Extension
 
 Install the `.mcpb` once in Claude Desktop on macOS or Windows. Starting with
-installer **0.1.6**, the bundle is a small stable launcher using MCPB 0.4's UV
+installer **0.1.7**, the bundle is a small stable launcher using MCPB 0.4's UV
 runtime. The server comes from PyPI and updates at every server start.
 
 ## Installation
@@ -28,8 +28,9 @@ shows the launcher version; `health_check.server_version` shows the running
 server version. Google settings and tokens persist in their existing locations.
 Startup requires an internet connection; there is no offline fallback guarantee.
 
-**Migration from 0.1.5 or earlier:** install 0.1.6 once. The old frozen bundle
-cannot acquire this mechanism remotely. Keep the same extension name and Google
+**Migration from 0.1.6 or earlier:** install 0.1.7 once. Versions through 0.1.5
+are frozen; 0.1.6 can keep a stale cached tool environment. Version 0.1.7 explicitly
+revalidates it on every start. The old launcher cannot change itself remotely. Keep the same extension name and Google
 OAuth settings. Claude may ask you to confirm replacing the extension.
 
 This updates Python server code, not Claude's stored extension manifest. New

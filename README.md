@@ -91,14 +91,14 @@ a default property such as `sc-domain:example.com`. The secret field is marked
 sensitive. Continue with the login instructions below. Manual JSON editing is
 not required; the Google Cloud setup in steps 1–4 is still required.
 
-The extension runs locally on macOS and Windows. From installer **0.1.6**, it
+The extension runs locally on macOS and Windows. From installer **0.1.7**, it
 checks PyPI for the newest stable server release every time the server starts.
 Restart Claude Desktop to apply a published server update; no new installer is
 needed for ordinary server releases. Running conversations are not hot-updated.
 Python 3.12 and server packages are managed by uv. Startup requires internet
 access; the installer contains no credentials or saved tokens.
 
-Already installed **0.1.5 or earlier**? Install the 0.1.6 bundle once to enable
+Already installed **0.1.6 or earlier**? Install the 0.1.7 bundle once to enable
 this mechanism. Keep the same OAuth settings; tokens remain outside the extension.
 The extension's displayed version describes the launcher. `health_check` returns
 `server_version`, the actual running PyPI version.
@@ -514,6 +514,6 @@ Follow the [release checklist](docs/release.md), commit and push the reviewed
 changes, then tag the prepared version:
 
 ```bash
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```

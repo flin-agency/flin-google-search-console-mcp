@@ -9,7 +9,9 @@ The separate plugin and source/CI environment retain their lockfile. Prereleases
 are excluded, the default index is HTTPS PyPI, and the host's unrelated uv config
 and `.env` loading are disabled. A same-launcher test verifies upgrades despite
 a cached previous version and a package index advertising a 24-hour cache lifetime.
-Installer 0.1.7 explicitly requests package-cache refresh on every start. A post-publication smoke test verifies the real PyPI
+Installer 0.1.7 explicitly requests package-cache refresh on every start.
+A live macOS check found that 0.1.6 could reuse a stale tool environment despite
+`@latest` in `--from`; use the 0.1.7 installer for dependable startup refresh. A post-publication smoke test verifies the real PyPI
 route. No updater changes tokens or replaces code inside a running server.
 
 `health_check.server_version` reports the running version. Existing 0.1.5 bundles
