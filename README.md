@@ -91,15 +91,22 @@ a default property such as `sc-domain:example.com`. The secret field is marked
 sensitive. Continue with the login instructions below. Manual JSON editing is
 not required; the Google Cloud setup in steps 1–4 is still required.
 
-The extension runs locally on macOS and Windows. Claude's UV runtime manages
-Python and installs the dependencies from the included lockfile. First startup
-requires internet access. The bundle contains no credentials or saved tokens.
+The extension runs locally on macOS and Windows. From installer **0.1.6**, it
+checks PyPI for the newest stable server release every time the server starts.
+Restart Claude Desktop to apply a published server update; no new installer is
+needed for ordinary server releases. Running conversations are not hot-updated.
+Python 3.12 and server packages are managed by uv. Startup requires internet
+access; the installer contains no credentials or saved tokens.
 
-To update, download and install the new `.mcpb`. Each bundle contains a specific
-server version and does not fetch newer server code with `@latest`. Saved tokens
-remain outside the extension directory. When switching from manual installation,
-use the same OAuth client and disable the old entry after verifying the extension
-to avoid duplicate tools.
+Already installed **0.1.5 or earlier**? Install the 0.1.6 bundle once to enable
+this mechanism. Keep the same OAuth settings; tokens remain outside the extension.
+The extension's displayed version describes the launcher. `health_check` returns
+`server_version`, the actual running PyPI version.
+
+Changes to Claude's extension settings, permissions, launcher or required Python
+version may still require a new bundle. Claude does not auto-update privately
+shared manifests from GitHub. A package that drops Python 3.12 support cannot be
+used by this launcher; uv selects the latest compatible stable version.
 
 #### Alternative: manual configuration
 
@@ -480,8 +487,8 @@ This repository publishes automatically with GitHub Actions:
 
 CI tests the Python package, desktop bundle and Claude Code plugin on Linux,
 macOS and Windows. It also checks the plugin manifest and rejects stale copies
-of the runtime in `plugin/`. A release tag builds all formats and creates a
-GitHub Release with the `.mcpb`, plugin ZIP,
+of the runtime in `plugin/`. A release tag builds all formats, publishes the Python package to PyPI,
+verifies the launcher against that published version, and creates a GitHub Release with the `.mcpb`, plugin ZIP,
 their checksums and Python distributions. Only Python distributions go to PyPI.
 
 A manual workflow run on a branch only validates and builds downloadable
@@ -489,10 +496,10 @@ workflow artifacts. Publishing requires a version tag matching the project,
 package, plugin and lockfile versions. Publishing a directory listing requires
 the separate process described in the [submission guide](docs/directory-submission.md).
 
-PyPI publication is optional: manually run the Release workflow on the version
-tag with `publish_pypi` enabled. It is independent of the GitHub download.
+PyPI publication runs automatically for each version tag. To retry publishing
+an older tag separately, manually run Release on that tag with `publish_pypi` enabled.
 
-### 1) Configure PyPI Trusted Publisher (optional)
+### 1) Configure PyPI Trusted Publisher
 
 In PyPI project settings for `flin-google-search-console-mcp`, add a Trusted Publisher with:
 
@@ -507,6 +514,6 @@ Follow the [release checklist](docs/release.md), commit and push the reviewed
 changes, then tag the prepared version:
 
 ```bash
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```

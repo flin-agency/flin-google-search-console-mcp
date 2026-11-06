@@ -3,8 +3,12 @@
   "name": "flin-google-search-console-mcp",
   "display_name": "flin Search Console",
   "description": "Analyse Google Search Console performance and inspect URLs with read-only access.",
-  "long_description": "Connect your Google account to explore clicks, impressions, queries, pages and indexing status in Claude Desktop. A Google Cloud Desktop OAuth client with the Search Console API enabled is required. Google sign-in opens in your browser on the first data request. OAuth tokens are stored locally; requests go to Google and results return to Claude. This extension exposes no Search Console write operations.",
-  "author": { "name": "flin GmbH", "email": "flin@flin.agency", "url": "https://flin.agency" },
+  "long_description": "Connect your Google account to explore clicks, impressions, queries, pages and indexing status in Claude Desktop. A Google Cloud Desktop OAuth client with the Search Console API enabled is required. Google sign-in opens in your browser on the first data request. OAuth tokens are stored locally; requests go to Google and results return to Claude. This extension exposes no Search Console write operations. At every server start, automatically checks PyPI for the latest stable server version. Restart Claude to apply server updates; active sessions are not interrupted. Internet access is required at startup. Private extension configuration updates may still require a new bundle.",
+  "author": {
+    "name": "flin GmbH",
+    "email": "flin@flin.agency",
+    "url": "https://flin.agency"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/flin-agency/flin-google-search-console-mcp.git"
@@ -23,8 +27,19 @@
     "mcp_config": {
       "command": "uv",
       "args": [
-        "run", "--directory", "${__dirname}",
-        "--locked", "--no-dev", "--python", "3.12",
+        "tool",
+        "run",
+        "--no-config",
+        "--no-env-file",
+        "--python",
+        "3.12",
+        "--default-index",
+        "https://pypi.org/simple",
+        "--prerelease",
+        "disallow",
+        "--from",
+        "flin-google-search-console-mcp@latest",
+        "python",
         "${__dirname}/server.py"
       ],
       "env": {
@@ -57,19 +72,54 @@
     }
   },
   "tools": [
-    { "name": "health_check", "description": "Check configuration and sign-in status." },
-    { "name": "list_sites", "description": "List accessible Search Console properties." },
-    { "name": "get_site_summary", "description": "Summarise clicks, impressions, CTR and position." },
-    { "name": "query_performance", "description": "Query performance with dimensions and filters." },
-    { "name": "get_top_queries", "description": "Find the top search queries." },
-    { "name": "get_top_pages", "description": "Find the top pages." },
-    { "name": "get_dimension_breakdown", "description": "Break down performance by one dimension." },
-    { "name": "inspect_url", "description": "Inspect Google's indexed status for a URL." }
+    {
+      "name": "health_check",
+      "description": "Check configuration and sign-in status."
+    },
+    {
+      "name": "list_sites",
+      "description": "List accessible Search Console properties."
+    },
+    {
+      "name": "get_site_summary",
+      "description": "Summarise clicks, impressions, CTR and position."
+    },
+    {
+      "name": "query_performance",
+      "description": "Query performance with dimensions and filters."
+    },
+    {
+      "name": "get_top_queries",
+      "description": "Find the top search queries."
+    },
+    {
+      "name": "get_top_pages",
+      "description": "Find the top pages."
+    },
+    {
+      "name": "get_dimension_breakdown",
+      "description": "Break down performance by one dimension."
+    },
+    {
+      "name": "inspect_url",
+      "description": "Inspect Google's indexed status for a URL."
+    }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32"],
-    "runtimes": { "python": ">=3.12 <3.13" }
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "python": ">=3.12 <3.13"
+    }
   },
-  "keywords": ["google", "search-console", "seo", "analytics"],
-  "license": "MIT"
+  "keywords": [
+    "google",
+    "search-console",
+    "seo",
+    "analytics"
+  ],
+  "license": "MIT",
+  "tools_generated": true
 }

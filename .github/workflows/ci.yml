@@ -57,11 +57,14 @@ jobs:
       - name: Build package
         run: uv build --out-dir dist/python
 
+      - name: Verify automatic updates across releases
+        run: uv run --locked python scripts/check_updates.py
+
       - name: Build desktop extension
         run: uv run --locked python scripts/build_mcpb.py
 
       - name: Test packaged extension
-        run: uv run --locked python scripts/check_mcpb.py dist/mcpb
+        run: uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
 
       - name: Build and test Claude Code plugin
         run: |

@@ -1,4 +1,21 @@
-# Security review — v0.1.5
+# Security review — v0.1.5 and v0.1.6
+
+## Update model change in v0.1.6
+
+The desktop bundle now runs the newest compatible stable server from PyPI at
+startup. Its original server lockfile is no longer a runtime security boundary.
+This intentionally trusts future PyPI releases and the dependencies they resolve.
+The separate plugin and source/CI environment retain their lockfile. Prereleases
+are excluded, the default index is HTTPS PyPI, and the host's unrelated uv config
+and `.env` loading are disabled. A same-launcher test verifies upgrades despite
+a cached previous version. A post-publication smoke test verifies the real PyPI
+route. No updater changes tokens or replaces code inside a running server.
+
+`health_check.server_version` reports the running version. Existing 0.1.5 bundles
+require one upgrade to enable this; extension manifest or Python-runtime changes
+may still need installation. See [desktop-extension.md](desktop-extension.md).
+
+## Original v0.1.5 review
 
 Reviewed 6 November 2026. Scope: the Python runtime, OAuth and token storage,
 all eight tools, desktop bundle and plugin packaging, dependencies, and GitHub

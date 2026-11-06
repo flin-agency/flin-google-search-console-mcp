@@ -21,7 +21,7 @@ EXPECTED_TOOLS = {
 }
 
 
-async def verify_server(parameters: StdioServerParameters) -> None:
+async def verify_server(parameters: StdioServerParameters, expected_version: str | None = None) -> None:
     async with stdio_client(parameters) as (read, write):
         async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=180)) as client:
             await client.initialize()
@@ -34,6 +34,8 @@ async def verify_server(parameters: StdioServerParameters) -> None:
                 assert tool.annotations.openWorldHint is (tool.name != "health_check")
             health = await client.call_tool("health_check", {})
             assert not health.isError
+            if expected_version:
+                assert health.structuredContent["server_version"] == expected_version
             assert health.structuredContent["status"] == "oauth_required"
             assert health.structuredContent["default_site_url"] == "sc-domain:example.com"
             failure = await client.call_tool("query_performance", {
@@ -43,7 +45,7 @@ async def verify_server(parameters: StdioServerParameters) -> None:
             assert "invalid_arguments" in failure.content[0].text
 
 
-async def check_bundle(bundle: Path) -> None:
+async def check_bundle(bundle: Path, wheel: Path | None = None) -> None:
     if bundle.is_dir():
         candidates = list(bundle.glob("*.mcpb"))
         if len(candidates) != 1:
@@ -83,13 +85,17 @@ async def check_bundle(bundle: Path) -> None:
         for key in ("UV_CACHE_DIR", "UV_PYTHON_INSTALL_DIR"):
             if key in os.environ:
                 environment[key] = os.environ[key]
+        arguments = [substitute(value) for value in config["args"]]
+        if wheel:
+            # Test the candidate before publishing, without modifying the bundle.
+            arguments[arguments.index("--from") + 1] = str(wheel.resolve())
         parameters = StdioServerParameters(
             command=uv,
-            args=[substitute(value) for value in config["args"]],
+            args=arguments,
             env=environment,
         )
         assert {tool["name"] for tool in manifest["tools"]} == EXPECTED_TOOLS
-        await verify_server(parameters)
+        await verify_server(parameters, manifest["version"])
         assert not (root / "test-tokens").exists(), "Smoke test must never start OAuth or write tokens."
         print(f"Bundle {manifest['version']}: 8 tools, configuration and error responses verified.")
 
@@ -97,7 +103,15 @@ async def check_bundle(bundle: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle", type=Path)
-    asyncio.run(check_bundle(parser.parse_args().bundle.resolve()))
+    parser.add_argument("--wheel", type=Path, help="Test an unpublished candidate wheel instead of PyPI.")
+    args = parser.parse_args()
+    wheel = args.wheel
+    if wheel and wheel.is_dir():
+        candidates = list(wheel.glob("*.whl"))
+        if len(candidates) != 1:
+            raise ValueError("The wheel directory must contain exactly one wheel.")
+        wheel = candidates[0]
+    asyncio.run(check_bundle(args.bundle.resolve(), wheel))
 
 
 if __name__ == "__main__":

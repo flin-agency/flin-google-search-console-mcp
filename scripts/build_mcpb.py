@@ -65,7 +65,15 @@ def stage_bundle(root: Path, destination: Path, *, tag: str | None = None) -> di
     manifest["version"] = version
     destination.mkdir(parents=True, exist_ok=True)
     (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    for name in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md"):
+    # The installed extension is a stable launcher, not a frozen server copy.
+    # Keep pyproject.toml for Claude's UV runtime provisioning contract.
+    (destination / "pyproject.toml").write_text(
+        '[project]\nname = "flin-search-console-desktop-launcher"\n'
+        f'version = "{version}"\nrequires-python = ">=3.12,<3.13"\n'
+        f'dependencies = ["flin-google-search-console-mcp>={version}"]\n'
+        '\n[tool.uv]\npackage = false\n', encoding="utf-8",
+    )
+    for name in ("README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md"):
         _copy_file(root / name, destination / name)
     _copy_file(root / "assets" / "icon.png", destination / "icon.png")
     _copy_file(root / "mcpb" / "server.py", destination / "server.py")
@@ -75,8 +83,6 @@ def stage_bundle(root: Path, destination: Path, *, tag: str | None = None) -> di
     for source in sorted(source_dir.rglob("*")):
         if source.is_symlink():
             raise ValueError("Symlinks are not allowed in the runtime package.")
-        if source.is_file() and source.suffix == ".py":
-            _copy_file(source, destination / source.relative_to(root))
     return manifest
 
 

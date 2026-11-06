@@ -1,13 +1,22 @@
 {
   "name": "flin-search-console",
   "displayName": "flin Search Console",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Read Google Search Console performance and URL indexing status in Claude Code. Requires your own Google Desktop OAuth client.",
-  "author": { "name": "flin GmbH", "email": "flin@flin.agency", "url": "https://flin.agency" },
+  "author": {
+    "name": "flin GmbH",
+    "email": "flin@flin.agency",
+    "url": "https://flin.agency"
+  },
   "homepage": "https://github.com/flin-agency/flin-google-search-console-mcp",
   "repository": "https://github.com/flin-agency/flin-google-search-console-mcp",
   "license": "MIT",
-  "keywords": ["search-console", "seo", "analytics", "read-only"],
+  "keywords": [
+    "search-console",
+    "seo",
+    "analytics",
+    "read-only"
+  ],
   "icon": "./icon.svg",
   "documentationUrl": "https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/plugin/README.md",
   "supportUrl": "https://github.com/flin-agency/flin-google-search-console-mcp/issues",

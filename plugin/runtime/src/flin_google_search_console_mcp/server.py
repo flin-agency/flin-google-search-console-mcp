@@ -32,6 +32,7 @@ except ImportError:
             )
 
 from .auth import AuthenticationError, AuthenticationRequiredError, describe_auth_state
+from . import __version__
 from .config import ConfigurationError, load_settings, missing_required_env_vars
 from .search_console import (
     get_dimension_breakdown as get_dimension_breakdown_data,
@@ -124,6 +125,7 @@ def health_check(account: str | None = None) -> dict[str, Any]:
     if missing:
         return {
             "ok": False,
+            "server_version": __version__,
             "status": "missing_configuration",
             "missing_env_vars": missing,
         }
@@ -136,6 +138,7 @@ def health_check(account: str | None = None) -> dict[str, Any]:
 
     return {
         "ok": auth_state["status"] in {"ready", "refreshable"},
+        "server_version": __version__,
         **_account_payload(account),
         "status": auth_state["status"],
         "default_site_url": settings.default_site_url,

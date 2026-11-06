@@ -1,86 +1,61 @@
-# Release Checklist
+# Release checklist
 
-The workflow creates a GitHub Release
-with the desktop extension, Claude Code plugin ZIP, checksums, wheel and source distribution.
-Directory publication is separate; see [directory-submission.md](directory-submission.md).
-
-PyPI publishing is optional and separate: manually dispatch `Release` on the
-version tag with `publish_pypi` enabled. Tag pushes publish to GitHub only.
+Version tags publish to **PyPI and GitHub**. From 0.1.6, installed desktop
+launchers load the latest compatible stable PyPI server on their next start.
+Do not publish a server release until it is ready to reach existing users.
 
 ## One-time setup
 
-1. Create PyPI project: `flin-google-search-console-mcp`
-2. Configure Trusted Publishing in PyPI:
-- GitHub owner: `flin-agency`
-- Repository: `flin-google-search-console-mcp`
-- Workflow: `release.yml`
-- Environment: `pypi`
-3. Ensure GitHub Actions is enabled for the repository
-4. Permit the release job to create GitHub Releases with its `GITHUB_TOKEN`
-   (`contents: write`). No separate GitHub token is needed.
-5. Install Node.js from `.nvmrc` for local desktop bundle builds.
+Configure PyPI Trusted Publishing for project `flin-google-search-console-mcp`,
+GitHub owner `flin-agency`, repository `flin-google-search-console-mcp`, workflow
+`release.yml`, environment `pypi`. Enable Actions and allow the release job to
+create GitHub Releases. No stored PyPI API token is required.
 
-## Before each release
+## Prepare a release
 
-1. Update the version in `pyproject.toml` and
-   `src/flin_google_search_console_mcp/__init__.py` and
-   `plugin/.claude-plugin/plugin.json`, then run `uv lock`.
-   The desktop manifest takes its version from the project automatically.
-   Keep the manifest's extension name stable across releases.
-2. Run local checks, replacing `v0.1.5` with the version being released:
+1. Update versions in `pyproject.toml`, the package `__init__.py` and
+   `plugin/.claude-plugin/plugin.json`; run `uv lock`.
+2. Keep the desktop extension name stable. Preserve the launcher's entry point
+   and Python 3.12 compatibility for automatic updates of existing installations.
+3. Synchronise the plugin and run checks with clean output directories:
 
 ```bash
 uv sync --locked --extra dev
 npm ci --ignore-scripts
 uv run --locked python scripts/build_plugin.py --sync
-node node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs plugin validate plugin --strict
 uv run --locked python -m pytest
-uv run --locked python -m compileall src scripts
+node node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs plugin validate plugin --strict
 uv build --out-dir dist/python
-uv run --locked python scripts/build_mcpb.py --tag v0.1.5
-uv run --locked python scripts/check_mcpb.py dist/mcpb
-uv run --locked python scripts/build_plugin.py --tag v0.1.5
+uv run --locked python scripts/build_mcpb.py --tag v0.1.6
+uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
+uv run --locked python scripts/check_updates.py
 uv run --locked python scripts/check_plugin.py dist/plugin
 ```
 
-Use a clean output directory when preparing another version. The build rejects
-inconsistent project/package/lockfile versions or a mismatching release tag.
-
-3. Inspect the bundle contents and install it in Claude Desktop. Complete a live
-   OAuth test, one Search Analytics query and one URL Inspection request.
-   Automated tests use fake credentials and never start Google sign-in.
-   Use the [German Claude review checklist](desktop-review.md) to record results.
-4. Commit and push the reviewed changes, then tag the prepared version:
+4. Inspect the artifacts and record any live Claude/OAuth acceptance checks.
+   Automated tests use dummy credentials only.
+5. Commit, push, then tag the matching version:
 
 ```bash
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```
 
-## Workflow behaviour
+## Workflow
 
-- `build` runs tests, creates Python distributions in `dist/python/`, then builds
-  and validates the desktop bundle in `dist/mcpb/` alongside `SHA256SUMS`, plus
-  the Claude Code plugin in `dist/plugin/` with its `.zip.sha256` file.
-- The packaged extension is extracted and launched with its manifest command to
-  verify the MCP handshake, tool list, configuration and error responses.
-- `publish-pypi` sends only the Python files to PyPI via Trusted Publishing,
-  only on an explicitly requested manual tag run.
-- `publish-github` runs after the build succeeds on a tag push, independently
-  of PyPI, and creates a release with all formats.
-- A manual workflow run on a branch builds artifacts without publishing. A run
-  on a matching version tag can optionally publish to PyPI.
-- If GitHub release creation fails after PyPI publication, rerun only failed jobs;
-  do not republish the same immutable PyPI version.
+- Build tests and audits the locked development/runtime graph, creates Python
+  distributions, validates the desktop launcher against the candidate wheel,
+  verifies automatic upgrades using a private fixture index, and tests the plugin.
+- `publish-pypi` publishes the wheel and source distribution with Trusted Publishing.
+- `publish-github` then runs the actual launcher against the published PyPI version
+  before creating the GitHub release, installer, plugin ZIP and checksums.
+- Manual branch runs build only. Manual tag runs with `publish_pypi=true` publish
+  to PyPI without trying to recreate an existing GitHub release.
+- If a later job fails after PyPI succeeds, rerun failed jobs only. Never attempt
+  to overwrite a published version. Correct faulty releases with a new version.
 
-## After release
-
-1. Verify GitHub workflow `Release` succeeded
-2. If requested separately, verify the package appears on PyPI
-3. Check that the GitHub Release includes the `.mcpb` and matching `SHA256SUMS`.
-4. Download and install the published bundle in Claude Desktop.
-5. Tell desktop users to install the new `.mcpb`; private bundles do not update
-   automatically from GitHub.
-
-The bundle is unsigned unless a separate signing process is introduced. Its
-checksum detects download corruption; it is not a publisher signature.
+Verify the PyPI version, GitHub assets and downloaded checksum after publication.
+Normal server updates need only a Claude restart. Users on 0.1.5 or earlier need
+one initial launcher upgrade; changes to the extension manifest or required
+Python version can still require a new installer. Private extension manifests
+do not update themselves from GitHub.

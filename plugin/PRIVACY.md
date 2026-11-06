@@ -1,6 +1,6 @@
 # Privacy Policy — flin Search Console
 
-Prepared 15 October 2026 for version 0.1.5.
+Updated 6 November 2026 for version 0.1.6.
 
 Prepared for publisher review before directory submission. The data-handling
 description below reflects the software prepared in this repository.
@@ -45,8 +45,12 @@ personal information depending on your property and queries.
 - The server contains no flin.agency telemetry, advertising, analytics or hosted
   data-collection endpoint. It does not send OAuth credentials or Search Console
   results to flin.agency. It does not read chat history or unrelated user files.
-- Installation may download Python and packages from distribution services;
-  those services receive normal connection information such as your IP address.
+- Installation may download Python and packages from distribution services.
+  From desktop installer 0.1.6, each server start checks PyPI for the latest
+  compatible stable server release and downloads updates when available.
+  Those services receive normal connection information such as your IP address.
+  Server code and dependencies can therefore change without reinstalling the
+  extension. No Google credentials are sent to PyPI.
   GitHub receives requests when you download releases or use its support service.
 
 ## Storage and retention

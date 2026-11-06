@@ -57,6 +57,9 @@ jobs:
       - name: Build package
         run: uv build --out-dir dist/python
 
+      - name: Verify automatic updates across releases
+        run: uv run --locked python scripts/check_updates.py
+
       - name: Build desktop extension and validate release version
         shell: bash
         run: |
@@ -69,7 +72,7 @@ jobs:
           fi
 
       - name: Test packaged extension
-        run: uv run --locked python scripts/check_mcpb.py dist/mcpb
+        run: uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
 
       - name: Test packaged Claude Code plugin
         run: uv run --locked python scripts/check_plugin.py dist/plugin
@@ -98,7 +101,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') && inputs.publish_pypi == true
+    if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.publish_pypi == true)
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -119,12 +122,14 @@ jobs:
 
   publish-github:
     name: Publish GitHub release
-    needs: build
+    needs: [build, publish-pypi]
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
       - name: Download Python distributions
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
@@ -142,6 +147,17 @@ jobs:
         with:
           name: claude-code-plugin
           path: release-assets
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Verify launcher against the published PyPI version
+        run: |
+          uv sync --locked --extra dev
+          uv run --locked python scripts/check_mcpb.py release-assets
 
       - name: Create release with installation downloads
         env:

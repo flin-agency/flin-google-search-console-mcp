@@ -1,79 +1,73 @@
 # Claude Desktop Extension
 
-The `.mcpb` installs this server locally in Claude Desktop on macOS and Windows.
-It uses MCPB 0.4's UV runtime and contains a versioned copy of the server plus
-`uv.lock`. It is not a hosted HTTP connector.
-
-For a pre-release installation test, see the German
-[Claude review checklist](desktop-review.md).
+Install the `.mcpb` once in Claude Desktop on macOS or Windows. Starting with
+installer **0.1.6**, the bundle is a small stable launcher using MCPB 0.4's UV
+runtime. The server comes from PyPI and updates at every server start.
 
 ## Installation
 
-1. Complete the Google Cloud setup in the [README](../README.md): enable the
-   Search Console API and create a Desktop app OAuth client.
-2. Download the `.mcpb` from the matching
-   [GitHub Release](https://github.com/flin-agency/flin-google-search-console-mcp/releases).
-3. Open it with a current Claude Desktop version, or use **Install Extension**
-   in the desktop extension settings.
-4. Fill in the client ID and client secret. The default property is optional.
-5. Ask Claude to run `health_check`, then list your Search Console sites.
-6. Complete Google sign-in in your browser.
+1. Enable the Search Console API and create a Google Cloud Desktop OAuth client
+   as described in the [README](../README.md).
+2. Download the `.mcpb` from the [latest GitHub Release](https://github.com/flin-agency/flin-google-search-console-mcp/releases/latest).
+3. In a current Claude Desktop, use **Install Extension** in extension settings.
+4. Enter your OAuth client ID and secret, optionally a default property.
+5. Ask Claude for `health_check` and `list_sites`, then sign in with Google.
 
-First startup downloads Python if needed and installs locked dependencies.
-If Claude rejects the UV server type, update Claude Desktop or use the manual
-configuration in the README.
+## Automatic server updates
 
-## Updates
+The manifest invokes `uv tool run --from flin-google-search-console-mcp@latest`
+with Python 3.12, the HTTPS PyPI index and prereleases disabled. uv checks for a
+new release on every start, even when an older tool environment is cached.
+Packages are cached to avoid unnecessary downloads. Restart Claude after a new
+release to use it. Active sessions keep their current server until restarted;
+there is no background replacement during a tool call.
 
-Download and install the next version's `.mcpb`. Privately distributed extensions
-do not update automatically from GitHub. Team administrators can upload a new
-version through their custom-extension management interface, retaining the same
-extension name.
+No new `.mcpb` installation is needed for normal server updates. The extension UI
+shows the launcher version; `health_check.server_version` shows the running
+server version. Google settings and tokens persist in their existing locations.
+Startup requires an internet connection; there is no offline fallback guarantee.
 
-This bundle does not run the latest PyPI release automatically. The existing
-manual `uvx …@latest` option remains available for that update behaviour.
-Saved tokens remain in the existing per-user storage directory outside the
-extension. When switching from manual installation, use the same OAuth client
-and disable the old entry after verification to avoid duplicate tools.
+**Migration from 0.1.5 or earlier:** install 0.1.6 once. The old frozen bundle
+cannot acquire this mechanism remotely. Keep the same extension name and Google
+OAuth settings. Claude may ask you to confirm replacing the extension.
 
-## Build and verify
+This updates Python server code, not Claude's stored extension manifest. New
+settings, permissions, launcher changes or a different Python requirement may
+still need a bundle update. uv selects the newest compatible stable release;
+a future server requiring Python newer than 3.12 needs a new launcher. The separate
+Claude Code plugin remains versioned and locked.
 
-Use the Node.js version in `.nvmrc`:
+## Security and distribution
+
+The bundle includes only its manifest, a small Python entry point, a launcher
+`pyproject.toml`, README, privacy/support documents, license and icon. It contains
+no frozen server source, server lockfile, credentials or developer dependencies.
+`tools_generated` lets Claude discover the tools from the running server.
+
+Automatic updates trust future releases of the project's PyPI account and their
+resolved dependencies. Runtime dependencies are no longer frozen by the desktop
+bundle's original lockfile. Each release is tested and audited in CI, published
+using GitHub/PyPI Trusted Publishing, and tested again through the real launcher
+before the GitHub release is created. The bundle remains unsigned; its checksum
+is an integrity check, not a publisher signature.
+
+## Build and test
 
 ```bash
 uv sync --locked --extra dev
 npm ci --ignore-scripts
+uv build --out-dir dist/python
 uv run --locked python scripts/build_mcpb.py
-uv run --locked python scripts/check_mcpb.py dist/mcpb
+uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
+uv run --locked python scripts/check_updates.py
 ```
 
-The output is `dist/mcpb/flin-google-search-console-mcp-<version>.mcpb` alongside
-`SHA256SUMS`. The pinned official MCPB CLI validates and packs a temporary staging
-directory containing only:
-
-- generated `manifest.json` and the desktop `server.py` entry point
-- `pyproject.toml`, `uv.lock` and `README.md`
-- privacy policy, support information, MIT license and icon
-- Python files in `src/flin_google_search_console_mcp/`
-
-Local `.env` files, tokens, Git metadata, tests, virtual environments and Node
-dependencies are excluded. Symlinked runtime files are rejected. OAuth settings
-are supplied by Claude at runtime and are never included in the bundle.
-
-The smoke test extracts the archive to a path containing spaces, launches the
-manifest command, and checks MCP with dummy credentials and an isolated token
-location. It never signs in, contacts Search Console or reads existing tokens.
-CI runs it on Linux, macOS and Windows.
-
-## Directory submission
-
-The current directory submission route uses a separate Claude Code plugin in
-`plugin/`. New MCPB directory listings are no longer accepted according to the
-current submission documentation. The plugin has different platform support;
-see [directory-submission.md](directory-submission.md) before choosing it.
+Use clean output directories or pass exact artifact paths. The smoke test uses
+fake configuration and isolated storage; it never signs into Google. After the
+version is published on PyPI, omit `--wheel` to verify the distributed command.
 
 ## References
 
-- [MCPB manifest and UV runtime](https://github.com/modelcontextprotocol/mcpb/blob/main/MANIFEST.md)
-- [Claude desktop installation and updates](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
-- [Team extension updates](https://support.claude.com/en/articles/12592343-enabling-and-using-the-desktop-extension-allowlist)
+- [Claude private extension updates](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
+- [uv latest-version behavior](https://docs.astral.sh/uv/concepts/tools/#tool-versions)
+- [MCPB UV manifest](https://github.com/modelcontextprotocol/mcpb/blob/main/MANIFEST.md)

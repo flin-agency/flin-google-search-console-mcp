@@ -36,13 +36,19 @@ def test_bundle_excludes_credentials_and_development_files(bundle_source: Path, 
 
     manifest = stage_bundle(bundle_source, staging)
 
-    expected = {"manifest.json", "pyproject.toml", "uv.lock", "README.md", "server.py", "PRIVACY.md", "LICENSE", "SUPPORT.md", "icon.png"}
-    expected.update(path.relative_to(bundle_source).as_posix() for path in (bundle_source / "src").rglob("*.py"))
+    expected = {"manifest.json", "pyproject.toml", "README.md", "server.py", "PRIVACY.md", "LICENSE", "SUPPORT.md", "icon.png"}
     assert {path.relative_to(staging).as_posix() for path in staging.rglob("*") if path.is_file()} == expected
     assert all(b"credential-marker" not in path.read_bytes() for path in staging.rglob("*") if path.is_file())
     assert manifest["version"] == release_version(bundle_source)
     assert manifest["user_config"]["google_client_secret"]["sensitive"] is True
-    assert "--locked" in manifest["server"]["mcp_config"]["args"]
+    args = manifest["server"]["mcp_config"]["args"]
+    assert args[:2] == ["tool", "run"]
+    assert args[args.index("--from") + 1] == "flin-google-search-console-mcp@latest"
+    assert args[args.index("--prerelease") + 1] == "disallow"
+    assert args[args.index("--default-index") + 1] == "https://pypi.org/simple"
+    assert manifest["tools_generated"] is True
+    assert not (staging / "src").exists()
+    assert not (staging / "uv.lock").exists()
 
 
 def test_bundle_version_matches_tag_and_package(bundle_source: Path) -> None:

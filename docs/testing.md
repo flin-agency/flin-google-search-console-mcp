@@ -44,7 +44,9 @@ Desktop bundle validation additionally requires Node.js from `.nvmrc`:
 ```bash
 npm ci --ignore-scripts
 uv run --locked python scripts/build_mcpb.py
-uv run --locked python scripts/check_mcpb.py dist/mcpb
+uv build --out-dir dist/python
+uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
+uv run --locked python scripts/check_updates.py
 ```
 
 This validates the manifest, extracts and starts the bundle, and checks the MCP
@@ -241,3 +243,11 @@ Before each release:
 - one live OAuth smoke test
 - one Search Analytics smoke test
 - one URL Inspection smoke test
+
+## Auto-update acceptance
+
+The candidate wheel override tests unpublished server code without changing the
+distributed manifest. After PyPI publication, run the smoke test without `--wheel`
+to verify the actual PyPI route. `check_updates.py` uses a private local index
+and one unchanged launcher/cache: 0.1.6 -> 0.1.7, ignoring 0.1.8rc1. Nothing is
+published and no Google account is accessed by this test.

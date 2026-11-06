@@ -121,6 +121,7 @@ def test_health_check_reports_missing_configuration(monkeypatch) -> None:
     assert result == {
         "ok": False,
         "status": "missing_configuration",
+        "server_version": server.__version__,
         "missing_env_vars": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
     }
 
