@@ -37,7 +37,7 @@ jobs:
 
       - name: Audit locked runtime dependencies
         run: |
-          uv export --locked --no-dev --no-emit-project --format requirements-txt --output audit-requirements.txt
+          uv export --locked --no-dev --no-emit-project --format requirements-txt -o audit-requirements.txt
           uvx pip-audit==2.10.1 --disable-pip --no-deps -r audit-requirements.txt
 
       - name: Run tests
