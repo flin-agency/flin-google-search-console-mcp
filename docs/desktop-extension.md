@@ -1,7 +1,7 @@
 # Claude Desktop Extension
 
 Install the `.mcpb` once in Claude Desktop on macOS or Windows. Starting with
-installer **0.1.7**, the bundle is a small stable launcher using MCPB 0.4's UV
+installer **0.1.8**, the bundle is a small stable launcher using MCPB 0.4's UV
 runtime. The server comes from PyPI and updates at every server start.
 
 ## Installation
@@ -15,7 +15,7 @@ runtime. The server comes from PyPI and updates at every server start.
 
 ## Automatic server updates
 
-The manifest invokes `uv tool run --from flin-google-search-console-mcp@latest`
+The manifest invokes `uv tool run --from "flin-google-search-console-mcp>=0.1.8,<0.2"`
 with Python 3.12, the HTTPS PyPI index and prereleases disabled. From 0.1.7,
 `--refresh-package` also explicitly revalidates the server package index cache. uv checks for a
 new release on every start, even when an older tool environment is cached.
@@ -28,16 +28,46 @@ shows the launcher version; `health_check.server_version` shows the running
 server version. Google settings and tokens persist in their existing locations.
 Startup requires an internet connection; there is no offline fallback guarantee.
 
-**Migration from 0.1.6 or earlier:** install 0.1.7 once. Versions through 0.1.5
+**Migration from 0.1.7 or earlier:** import the current bundle once for the
+version bound and connection_status metadata. Versions through 0.1.5
 are frozen; 0.1.6 can keep a stale cached tool environment. Version 0.1.7 explicitly
 revalidates it on every start. The old launcher cannot change itself remotely. Keep the same extension name and Google
 OAuth settings. Claude may ask you to confirm replacing the extension.
 
 This updates Python server code, not Claude's stored extension manifest. New
 settings, permissions, launcher changes or a different Python requirement may
-still need a bundle update. uv selects the newest compatible stable release;
+still need a bundle update. uv selects the newest compatible stable 0.1-series release;
 a future server requiring Python newer than 3.12 needs a new launcher. The separate
 Claude Code plugin remains versioned and locked.
+
+## Compatibility contract
+
+Automatic updates are bounded to `>=0.1.8,<0.2`, not all future versions. The
+0.1 patch series must retain Python 3.12, the imported `server.main` entry point,
+stdio MCP operation, existing OAuth setting names, account/token storage layout
+and existing tool arguments/results. Additive tools are allowed. Breaking any of
+these requires a new series and review of the launcher; a version number alone
+cannot prove compatibility. Integration tests exclude prereleases and 0.2/1.0.
+
+## Startup fallback
+
+Keep the normal refresh-at-start behavior. If PyPI is unavailable, check internet
+access and restart Claude; do not clear the uv cache or delete Google tokens.
+For an administrator's manual MCP entry, use `uv` with these arguments to run
+only an already cached compatible release:
+
+```json
+["tool", "run", "--offline", "--no-config", "--no-env-file", "--python", "3.12",
+ "--default-index", "https://pypi.org/simple", "--prerelease", "disallow",
+ "--from", "flin-google-search-console-mcp>=0.1.8,<0.2", "flin-google-search-console-mcp"]
+```
+
+Retain the same OAuth environment settings and token location; disable the normal
+entry while using the fallback to avoid duplicate tools. Offline mode does not
+check for new releases and fails if the cache/Python runtime is missing. Google
+queries still require internet. Remove `--offline` and restore the normal entry
+when connectivity returns. No automatic fallback or cached-login validation is
+claimed. The local fixture test covers a populated cache with its index stopped.
 
 ## Security and distribution
 

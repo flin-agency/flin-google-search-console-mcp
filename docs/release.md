@@ -1,7 +1,7 @@
 # Release checklist
 
-Version tags publish to **PyPI and GitHub**. From 0.1.7, installed desktop
-launchers load the latest compatible stable PyPI server on their next start.
+Version tags publish to **PyPI and GitHub**. From 0.1.8, installed desktop
+launchers load the latest stable PyPI server within `>=0.1.8,<0.2` on their next start.
 Do not publish a server release until it is ready to reach existing users.
 
 ## One-time setup
@@ -26,7 +26,7 @@ uv run --locked python scripts/build_plugin.py --sync
 uv run --locked python -m pytest
 node node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs plugin validate plugin --strict
 uv build --out-dir dist/python
-uv run --locked python scripts/build_mcpb.py --tag v0.1.7
+uv run --locked python scripts/build_mcpb.py --tag v0.1.8
 uv run --locked python scripts/check_mcpb.py dist/mcpb --wheel dist/python
 uv run --locked python scripts/check_updates.py
 uv run --locked python scripts/check_plugin.py dist/plugin
@@ -37,8 +37,8 @@ uv run --locked python scripts/check_plugin.py dist/plugin
 5. Commit, push, then tag the matching version:
 
 ```bash
-git tag v0.1.7
-git push origin v0.1.7
+git tag v0.1.8
+git push origin v0.1.8
 ```
 
 ## Workflow
@@ -55,7 +55,10 @@ git push origin v0.1.7
   to overwrite a published version. Correct faulty releases with a new version.
 
 Verify the PyPI version, GitHub assets and downloaded checksum after publication.
-Normal server updates need only a Claude restart. Users on 0.1.6 or earlier need
+Normal server updates need only a Claude restart. Users on 0.1.7 or earlier need
 one initial launcher upgrade; changes to the extension manifest or required
 Python version can still require a new installer. Private extension manifests
 do not update themselves from GitHub.
+
+Every release includes the versioned `.mcpb` and identical stable alias
+`flin-google-search-console-mcp.mcpb`, both in SHA256SUMS. Preserve the extension ID.

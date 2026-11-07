@@ -1,7 +1,7 @@
 {
   "name": "flin-search-console",
   "displayName": "flin Search Console",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Read Google Search Console performance and URL indexing status in Claude Code. Requires your own Google Desktop OAuth client.",
   "author": {
     "name": "flin GmbH",

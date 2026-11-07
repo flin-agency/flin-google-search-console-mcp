@@ -119,6 +119,44 @@ def _read_only_tool(title: str, *, external: bool = True):
 
 
 @_read_only_tool("Check Search Console connection", external=False)
+def connection_status(account: str | None = None) -> dict[str, str]:
+    """Report local setup and running version; never sign in, refresh tokens or call Google.
+
+    A saved token cannot prove that Google still accepts it: auth_status is unknown
+    in that case, and live_access remains not_checked. Run list_sites explicitly
+    to sign in if needed and check access; it may display private property names.
+    """
+    result = {
+        "server_version": __version__,
+        "configuration_status": "incomplete",
+        "auth_status": "unknown",
+        "live_access": "not_checked",
+        "next_step": "Enter the Google Desktop OAuth client ID and secret in extension settings.",
+    }
+    if missing_required_env_vars():
+        return result
+    try:
+        settings = load_settings()
+        result["configuration_status"] = "configured"
+        state = describe_auth_state(settings=settings, account=account)
+    except ConfigurationError:
+        result["configuration_status"] = "incomplete"
+        result["next_step"] = "Check OAuth settings and the selected account label."
+        return result
+    except Exception:
+        result["next_step"] = "Check private token storage permissions, then run connection_status again."
+        return result
+    if state["status"] in {"ready", "refreshable"}:
+        result["next_step"] = "Run list_sites to check Google access; saved credentials have not been verified online."
+    elif state["status"] == "oauth_required":
+        result["auth_status"] = "unauthenticated"
+        result["next_step"] = "Run list_sites and complete Google sign-in if prompted."
+    else:
+        result["next_step"] = "Check or remove the invalid local token after stopping the server, then run list_sites to sign in."
+    return result
+
+
+@_read_only_tool("Check legacy Search Console health", external=False)
 def health_check(account: str | None = None) -> dict[str, Any]:
     """Check local configuration and saved sign-in status without opening a browser or calling Google."""
     missing = missing_required_env_vars()

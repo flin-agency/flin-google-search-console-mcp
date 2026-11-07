@@ -192,7 +192,7 @@ Use this config:
   "mcpServers": {
     "flin-google-search-console-mcp": {
       "command": "uvx",
-      "args": ["flin-google-search-console-mcp@latest"],
+      "args": ["--refresh-package", "flin-google-search-console-mcp", "--prerelease", "disallow", "flin-google-search-console-mcp>=0.1.8,<0.2"],
       "env": {
         "GOOGLE_CLIENT_ID": "xxx",
         "GOOGLE_CLIENT_SECRET": "xxx",
@@ -249,5 +249,12 @@ Before each release:
 The candidate wheel override tests unpublished server code without changing the
 distributed manifest. After PyPI publication, run the smoke test without `--wheel`
 to verify the actual PyPI route. `check_updates.py` uses a private local index
-and one unchanged launcher/cache: 0.1.6 -> 0.1.7, ignoring 0.1.8rc1. Nothing is
+and one unchanged launcher/cache: 0.1.8 -> 0.1.9, ignoring 0.1.10rc1, 0.2.0 and 1.0.0. Nothing is
 published and no Google account is accessed by this test.
+
+The fixture asserts unchanged OAuth settings and token bytes/mtime/permissions
+across the update, then stops its HTTP index and checks an explicit `--offline`
+fallback with refresh flags removed. `connection_status` tests forbid refresh,
+browser sign-in and Google access. Missing/local/invalid tokens never claim live
+authentication. Native Apple Silicon process tests, Linux/Windows CI and live
+Claude UI/customer-account acceptance are distinct; record which actually ran.

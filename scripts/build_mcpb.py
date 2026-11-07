@@ -52,7 +52,7 @@ def _copy_file(source: Path, destination: Path) -> None:
 
 def stage_bundle(root: Path, destination: Path, *, tag: str | None = None) -> dict:
     # Reject symlinked parents too (for example src/ or assets/), before reading.
-    for relative in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md",
+    for relative in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md",
                      "assets/icon.png", "mcpb/server.py", "mcpb/manifest.template.json", f"src/{PACKAGE}"):
         path = root / relative
         for candidate in (path, *path.parents):
@@ -70,10 +70,10 @@ def stage_bundle(root: Path, destination: Path, *, tag: str | None = None) -> di
     (destination / "pyproject.toml").write_text(
         '[project]\nname = "flin-search-console-desktop-launcher"\n'
         f'version = "{version}"\nrequires-python = ">=3.12,<3.13"\n'
-        f'dependencies = ["flin-google-search-console-mcp>={version}"]\n'
+        'dependencies = ["flin-google-search-console-mcp>=0.1.8,<0.2"]\n'
         '\n[tool.uv]\npackage = false\n', encoding="utf-8",
     )
-    for name in ("README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md"):
+    for name in ("README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md"):
         _copy_file(root / name, destination / name)
     _copy_file(root / "assets" / "icon.png", destination / "icon.png")
     _copy_file(root / "mcpb" / "server.py", destination / "server.py")
@@ -104,7 +104,11 @@ def build_bundle(root: Path, output_dir: Path, *, tag: str | None = None) -> Pat
             if actual != expected:
                 raise RuntimeError("Packed files differ from the runtime allowlist.")
     checksum = hashlib.sha256(output.read_bytes()).hexdigest()
-    (output_dir / "SHA256SUMS").write_text(f"{checksum}  {output.name}\n", encoding="utf-8")
+    alias = output.with_name("flin-google-search-console-mcp.mcpb")
+    shutil.copyfile(output, alias)
+    (output_dir / "SHA256SUMS").write_text(
+        f"{checksum}  {output.name}\n{checksum}  {alias.name}\n", encoding="utf-8",
+    )
     return output
 
 

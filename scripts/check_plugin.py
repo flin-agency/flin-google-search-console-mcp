@@ -68,7 +68,7 @@ async def check_plugin(bundle: Path) -> None:
         ))
         assert not token_dir.exists(), "Smoke test must not log in or write OAuth tokens."
         assert not (root / "runtime/.venv").exists(), "Dependencies must stay outside the plugin."
-        print(f"Plugin {manifest['version']}: 8 read-only tools, configuration and error responses verified.")
+        print(f"Plugin {manifest['version']}: 9 read-only tools, configuration and error responses verified.")
 
 
 def main() -> None:

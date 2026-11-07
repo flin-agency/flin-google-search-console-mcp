@@ -3,7 +3,7 @@
   "name": "flin-google-search-console-mcp",
   "display_name": "flin Search Console",
   "description": "Analyse Google Search Console performance and inspect URLs with read-only access.",
-  "long_description": "Connect your Google account to explore clicks, impressions, queries, pages and indexing status in Claude Desktop. A Google Cloud Desktop OAuth client with the Search Console API enabled is required. Google sign-in opens in your browser on the first data request. OAuth tokens are stored locally; requests go to Google and results return to Claude. This extension exposes no Search Console write operations. At every server start, automatically checks PyPI for the latest stable server version. Restart Claude to apply server updates; active sessions are not interrupted. Internet access is required at startup. Private extension configuration updates may still require a new bundle.",
+  "long_description": "Connect your Google account to explore clicks, impressions, queries, pages and indexing status in Claude Desktop. A Google Cloud Desktop OAuth client with the Search Console API enabled is required. Google sign-in opens in your browser on the first data request. OAuth tokens are stored locally; requests go to Google and results return to Claude. This extension exposes no Search Console write operations. At every server start, automatically checks PyPI for the latest stable server version in the supported 0.1 series (>=0.1.8,<0.2). Restart Claude to apply server updates; active sessions are not interrupted. Internet access is required at startup. Private extension configuration updates may still require a new bundle.",
   "author": {
     "name": "flin GmbH",
     "email": "flin@flin.agency",
@@ -40,7 +40,7 @@
         "--refresh-package",
         "flin-google-search-console-mcp",
         "--from",
-        "flin-google-search-console-mcp@latest",
+        "flin-google-search-console-mcp>=0.1.8,<0.2",
         "python",
         "${__dirname}/server.py"
       ],
@@ -74,6 +74,10 @@
     }
   },
   "tools": [
+    {
+      "name": "connection_status",
+      "description": "Check local setup and actual server version without signing in or calling Google."
+    },
     {
       "name": "health_check",
       "description": "Check configuration and sign-in status."

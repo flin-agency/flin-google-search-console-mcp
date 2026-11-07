@@ -1,23 +1,64 @@
-# flin-google-search-console-mcp
+# flin Google Search Console MCP
 
-Read-only MCP server for Google Search Console, built to work well in Claude Desktop with a browser-based OAuth flow and local token storage.
+## In Claude Desktop starten — Mac mit Apple Silicon (M1 oder neuer)
 
-For the prepared **Claude Code plugin**, see [plugin/README.md](plugin/README.md).
-It requires Claude Code's secret configuration prompts and is separate from the
-desktop extension below. Directory submission is prepared, not yet approved.
+1. **[Desktop-Paket herunterladen](https://github.com/flin-agency/flin-google-search-console-mcp/releases/latest/download/flin-google-search-console-mcp.mcpb)** und in Claude Desktop unter **Einstellungen → Erweiterungen → Erweiterung installieren** importieren.
+2. **Google OAuth Client ID** und **Google OAuth Client Secret** aus dem Passwortmanager bzw. vom zuständigen Administrator eintragen. Optional: die freigegebene Standard-Property. Die Werte gehören zu einem Google-OAuth-Client vom Typ **Desktop-App**; die Search Console API muss aktiviert sein.
+3. In Claude: **„Führe connection_status aus.“** Das prüft die lokale Einrichtung, öffnet keinen Browser und ruft Google nicht auf. Bei `incomplete` zuerst die Einstellungen vervollständigen.
+4. Danach ausdrücklich: **„Führe list_sites aus und prüfe, ob meine freigegebene Property angezeigt wird.“** Bei Bedarf Google-Anmeldung im Browser abschliessen. Nur ein erfolgreicher Google-Aufruf bestätigt den Zugriff; ein vorhandenes Token genügt dafür nicht.
+5. Für den konkreten Datentest: **„Zeige mit get_site_summary die Klicks und Impressionen meiner ausgewählten Property für die letzte abgeschlossene Woche.“** Verwende die Property exakt aus `list_sites`. Ergebnisse können vertrauliche Daten enthalten.
 
-## Privacy Policy
+Windows und Intel-Macs bleiben unterstützt; Linux kann den Python-Server direkt
+nutzen. Ein automatisierter Paketstart auf Apple Silicon ersetzt keinen echten
+Kundenkontotest in der Claude-Oberfläche.
 
-See [PRIVACY.md](PRIVACY.md) for data flows, storage, retention and deletion.
-The server sends requests to Google and returns results to your MCP client. It
-does not send Search Console data to flin GmbH. OAuth tokens are stored as local
-JSON files and are not encrypted by the server. Sensitive client settings in Claude
-and the server's token files are separate storage mechanisms.
+## Updates und Verbindungsstatus
 
-Publisher: flin GmbH, Weinbergstrasse 31, 8006 Zürich, Switzerland.
-Privacy and security contact: flin@flin.agency. See [SUPPORT.md](SUPPORT.md).
+- **Erweiterungsversion**: Version des importierten Starters in Claude.
+- **Serverversion**: `connection_status.server_version` bzw. `health_check.server_version`.
+- Der aktuelle Starter übernimmt bei Neustart stabile PyPI-Updates innerhalb
+  **`>=0.1.8,<0.2`** mit Python 3.12. Vorabversionen und 0.2/1.x sind ausgeschlossen.
+  Laufende Sitzungen, OAuth-Einstellungen und gespeicherte Tokens bleiben erhalten.
+- Einmaliger Import des aktuellen Pakets ist für ältere Starter nötig, damit die
+  Versionsgrenze und das neue Tool-Verzeichnis gelten. Normale kompatible
+  Server-Updates brauchen danach keinen Paketimport. Änderungen am Starter,
+  an Eingabefeldern oder der Python-Anforderung können einen neuen Import verlangen.
+- Start benötigt normalerweise Internet. **Bei Startproblemen:** Verbindung prüfen
+  und Claude neu starten; den Cache nicht löschen. Der dokumentierte
+  [manuelle Cache-Fallback](docs/desktop-extension.md#startup-fallback) ist nur für
+  bereits geladene Pakete verfügbar. Google-Abfragen benötigen weiterhin Internet.
 
-## Claude Desktop Quickstart
+`connection_status` liefert nur `server_version`, `configuration_status`,
+`auth_status`, `live_access` und `next_step`. Gespeicherte gültige oder erneuerbare
+Tokens ergeben `auth_status=unknown`, solange Google nicht geprüft wurde.
+`live_access` bleibt bei diesem rein lokalen Tool immer `not_checked`; `list_sites`
+ist ein separater Live-Test und ändert diese lokale Statusaussage nicht.
+Das bestehende `health_check` und seine Felder bleiben erhalten.
+
+## Datenumfang und Rechte
+
+Der Server liest Daten; er ändert keine Properties und beantragt keine Indexierung.
+Performance-Leserechte genügen für Performance-Abfragen; für den vollständigen
+Funktionsumfang einen Full User verwenden. Eine pauschale Owner-Pflicht besteht
+nicht. API-Aktivierung und Zugriff auf die konkrete Property sind getrennte
+Voraussetzungen. [Google-Rollen](https://support.google.com/webmasters/answer/7687615?hl=en)
+
+Search Analytics liefert Top-Zeilen, **keinen garantierten Voll-Export**. Pro
+Anfrage sind maximal 25'000 Zeilen möglich (Standard 1'000); `start_row` ermöglicht
+weitere Seiten, hebt Googles interne Grenzen aber nicht auf. Google nennt maximal
+50'000 Zeilen pro Tag, Property und Suchtyp. Anonymisierte Suchanfragen fehlen in
+Query-Zeilen; Zeilensummen können deshalb von Gesamtsummen abweichen. Fehlende
+Zeilen sind kein Nachweis für null Suchanfragen.
+[API-Grenzen](https://developers.google.com/webmaster-tools/v1/searchanalytics/query) ·
+[Datenauslassungen](https://developers.google.com/search/blog/2022/10/performance-data-deep-dive)
+
+URL Inspection zeigt den Stand im Google-Index, keinen Live-Crawl der Website.
+[Google API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect)
+
+[Datenschutz](PRIVACY.md) · [Sicherheit](SECURITY.md) · [Support](SUPPORT.md)
+· [Claude Code Plugin](plugin/README.md) · [Versionierte Downloads](https://github.com/flin-agency/flin-google-search-console-mcp/releases)
+
+## Administrator and developer setup
 
 If your goal is simply "make this work in Claude Desktop", follow these steps in order.
 
@@ -25,7 +66,13 @@ If your goal is simply "make this work in Claude Desktop", follow these steps in
 
 The Google account you use during login must already have access to at least one Search Console property.
 
-Accepted access levels for the API include owner, full, and read access.
+The signed-in account needs access to the selected Search Console property.
+Full-user access is sufficient for the full read-only feature set; owner status
+is not required. Restricted users can view Performance data and have limited
+URL Inspection rights. Google Cloud API enablement does not grant property access.
+See [Google's permissions table](https://support.google.com/webmasters/answer/7687615?hl=en).
+The OAuth client must be a Desktop app with the Search Console API enabled;
+the server requests only `webmasters.readonly`.
 
 ### 2) Create or choose a Google Cloud project
 
@@ -91,22 +138,22 @@ a default property such as `sc-domain:example.com`. The secret field is marked
 sensitive. Continue with the login instructions below. Manual JSON editing is
 not required; the Google Cloud setup in steps 1–4 is still required.
 
-The extension runs locally on macOS and Windows. From installer **0.1.7**, it
-checks PyPI for the newest stable server release every time the server starts.
+The extension runs locally on macOS and Windows. From installer **0.1.8**, it
+checks PyPI for the newest stable compatible 0.1-series server release every time the server starts.
 Restart Claude Desktop to apply a published server update; no new installer is
 needed for ordinary server releases. Running conversations are not hot-updated.
 Python 3.12 and server packages are managed by uv. Startup requires internet
 access; the installer contains no credentials or saved tokens.
 
-Already installed **0.1.6 or earlier**? Install the 0.1.7 bundle once to enable
-this mechanism. Keep the same OAuth settings; tokens remain outside the extension.
+Already installed **0.1.7 or earlier**? Import the current bundle once to apply the compatibility limit
+and updated extension metadata. Keep the same OAuth settings; tokens remain outside the extension.
 The extension's displayed version describes the launcher. `health_check` returns
 `server_version`, the actual running PyPI version.
 
 Changes to Claude's extension settings, permissions, launcher or required Python
 version may still require a new bundle. Claude does not auto-update privately
 shared manifests from GitHub. A package that drops Python 3.12 support cannot be
-used by this launcher; uv selects the latest compatible stable version.
+used by this launcher; uv selects the latest stable version within `>=0.1.8,<0.2`.
 
 #### Alternative: manual configuration
 
@@ -117,7 +164,7 @@ The existing PyPI installation remains available. Its minimum configuration is:
   "mcpServers": {
     "flin-google-search-console-mcp": {
       "command": "uvx",
-      "args": ["flin-google-search-console-mcp@latest"],
+      "args": ["--refresh-package", "flin-google-search-console-mcp", "--prerelease", "disallow", "flin-google-search-console-mcp>=0.1.8,<0.2"],
       "env": {
         "GOOGLE_CLIENT_ID": "your_oauth_client_id",
         "GOOGLE_CLIENT_SECRET": "your_oauth_client_secret"
@@ -134,7 +181,7 @@ If you want a default property so you do not have to pass `site_url` every time:
   "mcpServers": {
     "flin-google-search-console-mcp": {
       "command": "uvx",
-      "args": ["flin-google-search-console-mcp@latest"],
+      "args": ["--refresh-package", "flin-google-search-console-mcp", "--prerelease", "disallow", "flin-google-search-console-mcp>=0.1.8,<0.2"],
       "env": {
         "GOOGLE_CLIENT_ID": "your_oauth_client_id",
         "GOOGLE_CLIENT_SECRET": "your_oauth_client_secret",
@@ -214,7 +261,7 @@ If you want to override the location:
   "mcpServers": {
     "flin-google-search-console-mcp": {
       "command": "uvx",
-      "args": ["flin-google-search-console-mcp@latest"],
+      "args": ["--refresh-package", "flin-google-search-console-mcp", "--prerelease", "disallow", "flin-google-search-console-mcp>=0.1.8,<0.2"],
       "env": {
         "GOOGLE_CLIENT_ID": "your_oauth_client_id",
         "GOOGLE_CLIENT_SECRET": "your_oauth_client_secret",
@@ -236,7 +283,7 @@ By default, named account tokens are stored next to the default token. To choose
   "mcpServers": {
     "flin-google-search-console-mcp": {
       "command": "uvx",
-      "args": ["flin-google-search-console-mcp@latest"],
+      "args": ["--refresh-package", "flin-google-search-console-mcp", "--prerelease", "disallow", "flin-google-search-console-mcp>=0.1.8,<0.2"],
       "env": {
         "GOOGLE_CLIENT_ID": "your_oauth_client_id",
         "GOOGLE_CLIENT_SECRET": "your_oauth_client_secret",
@@ -317,6 +364,7 @@ Use the exact property string returned by `list_sites`. Do not guess.
 
 ## What This MCP Exposes
 
+- `connection_status` (local, no sign-in or Google request)
 - `health_check`
 - `list_sites`
 - `get_site_summary`
@@ -433,7 +481,7 @@ uv run --env-file .env flin-google-search-console-mcp
 Run the latest published package directly:
 
 ```bash
-uvx flin-google-search-console-mcp@latest
+uvx --refresh-package flin-google-search-console-mcp --prerelease disallow "flin-google-search-console-mcp>=0.1.8,<0.2"
 ```
 
 ## Troubleshooting
@@ -514,6 +562,6 @@ Follow the [release checklist](docs/release.md), commit and push the reviewed
 changes, then tag the prepared version:
 
 ```bash
-git tag v0.1.7
-git push origin v0.1.7
+git tag v0.1.8
+git push origin v0.1.8
 ```

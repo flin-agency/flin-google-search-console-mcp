@@ -14,7 +14,7 @@ from scripts.build_mcpb import PACKAGE, ROOT, release_version, stage_bundle
 def bundle_source(tmp_path: Path) -> Path:
     root = tmp_path / "source"
     root.mkdir()
-    for filename in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md"):
+    for filename in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md"):
         shutil.copyfile(ROOT / filename, root / filename)
     shutil.copytree(ROOT / "assets", root / "assets")
     shutil.copytree(ROOT / "mcpb", root / "mcpb")
@@ -36,14 +36,14 @@ def test_bundle_excludes_credentials_and_development_files(bundle_source: Path, 
 
     manifest = stage_bundle(bundle_source, staging)
 
-    expected = {"manifest.json", "pyproject.toml", "README.md", "server.py", "PRIVACY.md", "LICENSE", "SUPPORT.md", "icon.png"}
+    expected = {"manifest.json", "pyproject.toml", "README.md", "server.py", "PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md", "icon.png"}
     assert {path.relative_to(staging).as_posix() for path in staging.rglob("*") if path.is_file()} == expected
     assert all(b"credential-marker" not in path.read_bytes() for path in staging.rglob("*") if path.is_file())
     assert manifest["version"] == release_version(bundle_source)
     assert manifest["user_config"]["google_client_secret"]["sensitive"] is True
     args = manifest["server"]["mcp_config"]["args"]
     assert args[:2] == ["tool", "run"]
-    assert args[args.index("--from") + 1] == "flin-google-search-console-mcp@latest"
+    assert args[args.index("--from") + 1] == "flin-google-search-console-mcp>=0.1.8,<0.2"
     assert args[args.index("--prerelease") + 1] == "disallow"
     assert args[args.index("--refresh-package") + 1] == "flin-google-search-console-mcp"
     assert args[args.index("--default-index") + 1] == "https://pypi.org/simple"

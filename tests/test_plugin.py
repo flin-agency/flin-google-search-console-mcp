@@ -16,7 +16,7 @@ from scripts.build_plugin import build_plugin, check_plugin_sync, sync_plugin
 def plugin_source(tmp_path: Path) -> Path:
     root = tmp_path / "source"
     root.mkdir()
-    for name in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md"):
+    for name in ("pyproject.toml", "uv.lock", "README.md", "PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md"):
         shutil.copyfile(ROOT / name, root / name)
     for directory in ("assets", "mcpb", "src", "plugin"):
         shutil.copytree(ROOT / directory, root / directory, ignore=shutil.ignore_patterns("__pycache__", ".venv"))

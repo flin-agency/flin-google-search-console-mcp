@@ -2,8 +2,12 @@
 
 For setup and non-sensitive product issues, use
 [GitHub Issues](https://github.com/flin-agency/flin-google-search-console-mcp/issues).
-Include the package version, operating system, Claude version, failing tool name,
-sanitized error code and whether `health_check` reports configuration or sign-in problems.
+Include the extension version, `connection_status.server_version`, operating
+system/CPU (Apple Silicon or Intel), Claude version, failing tool name,
+sanitized error code and the five fields from `connection_status`. Local tokens are not live proof of access.
+For a requested live test, run `list_sites` separately; do not paste its property
+list into public issues. Obtain missing OAuth values from your administrator or
+password manager. See the [startup/cache fallback](https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/docs/desktop-extension.md#startup-fallback).
 
 Do not include OAuth secrets, token files, full environment dumps, private
 Search Console results or unredacted client logs. A public issue is not a channel

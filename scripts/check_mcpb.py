@@ -16,7 +16,7 @@ from mcp.client.stdio import stdio_client
 
 
 EXPECTED_TOOLS = {
-    "health_check", "list_sites", "get_site_summary", "query_performance",
+    "connection_status", "health_check", "list_sites", "get_site_summary", "query_performance",
     "get_top_queries", "get_top_pages", "get_dimension_breakdown", "inspect_url",
 }
 
@@ -31,7 +31,15 @@ async def verify_server(parameters: StdioServerParameters, expected_version: str
                 assert tool.annotations and tool.annotations.title
                 assert tool.annotations.readOnlyHint is True
                 assert tool.annotations.destructiveHint is False
-                assert tool.annotations.openWorldHint is (tool.name != "health_check")
+                assert tool.annotations.openWorldHint is (tool.name not in {"health_check", "connection_status"})
+            status = await client.call_tool("connection_status", {})
+            assert not status.isError
+            assert status.structuredContent == {
+                "server_version": expected_version or status.structuredContent["server_version"],
+                "configuration_status": "configured", "auth_status": "unauthenticated",
+                "live_access": "not_checked",
+                "next_step": "Run list_sites and complete Google sign-in if prompted.",
+            }
             health = await client.call_tool("health_check", {})
             assert not health.isError
             if expected_version:
@@ -50,8 +58,13 @@ async def verify_server(parameters: StdioServerParameters, expected_version: str
 async def check_bundle(bundle: Path, wheel: Path | None = None) -> None:
     if bundle.is_dir():
         candidates = list(bundle.glob("*.mcpb"))
+        if len(candidates) > 1:
+            candidates = [p for p in candidates if p.name != "flin-google-search-console-mcp.mcpb"]
         if len(candidates) != 1:
             raise ValueError("The bundle directory must contain exactly one .mcpb file.")
+        alias = bundle / "flin-google-search-console-mcp.mcpb"
+        if alias.exists():
+            assert alias.read_bytes() == candidates[0].read_bytes(), "Alias must match the versioned package"
         bundle = candidates[0]
     uv = shutil.which("uv")
     if uv is None:
@@ -99,7 +112,7 @@ async def check_bundle(bundle: Path, wheel: Path | None = None) -> None:
         assert {tool["name"] for tool in manifest["tools"]} == EXPECTED_TOOLS
         await verify_server(parameters, manifest["version"])
         assert not (root / "test-tokens").exists(), "Smoke test must never start OAuth or write tokens."
-        print(f"Bundle {manifest['version']}: 8 tools, configuration and error responses verified.")
+        print(f"Bundle {manifest['version']}: 9 tools, configuration and error responses verified.")
 
 
 def main() -> None:

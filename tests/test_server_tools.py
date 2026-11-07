@@ -15,14 +15,14 @@ def test_mcp_advertises_read_only_annotations() -> None:
     async def list_tools():
         async with create_connected_server_and_client_session(server.mcp) as client:
             response = await client.list_tools()
-            assert len(response.tools) == 8
+            assert len(response.tools) == 9
             for tool in response.tools:
                 assert tool.annotations is not None
                 assert tool.annotations.title
                 assert tool.annotations.readOnlyHint is True
                 assert tool.annotations.destructiveHint is False
                 assert tool.annotations.idempotentHint is True
-                assert tool.annotations.openWorldHint is (tool.name != "health_check")
+                assert tool.annotations.openWorldHint is (tool.name not in {"health_check", "connection_status"})
 
     asyncio.run(list_tools())
 
@@ -402,3 +402,75 @@ def test_inspect_url_returns_wrapped_payload(monkeypatch) -> None:
     assert result["ok"] is True
     assert result["result"]["verdict"] == "PASS"
     assert captured["account"] == "work"
+
+
+@pytest.mark.parametrize('state,auth_status', [
+    ('ready', 'unknown'), ('refreshable', 'unknown'),
+    ('oauth_required', 'unauthenticated'), ('invalid_token_file', 'unknown'),
+])
+def test_connection_status_never_confuses_local_tokens_with_live_access(monkeypatch, state, auth_status):
+    monkeypatch.setattr(server, 'missing_required_env_vars', lambda: [])
+    monkeypatch.setattr(server, 'load_settings', lambda: object())
+    monkeypatch.setattr(server, 'describe_auth_state', lambda **kw: {
+        'status': state, 'has_token_file': True, 'error': 'secret-marker',
+    })
+    result = server.connection_status()
+    assert set(result) == {'server_version', 'configuration_status', 'auth_status', 'live_access', 'next_step'}
+    assert result['server_version'] == server.__version__
+    assert result['configuration_status'] == 'configured'
+    assert result['auth_status'] == auth_status
+    assert result['live_access'] == 'not_checked'
+    assert 'secret-marker' not in str(result)
+
+
+@pytest.mark.parametrize('error,configuration', [
+    (server.ConfigurationError('secret-marker'), 'incomplete'),
+    (PermissionError('secret-marker'), 'configured'),
+])
+def test_connection_status_sanitizes_failed_local_inspection(monkeypatch, error, configuration):
+    monkeypatch.setattr(server, 'missing_required_env_vars', lambda: [])
+    monkeypatch.setattr(server, 'load_settings', lambda: object())
+    def fail(**kw):
+        raise error
+    monkeypatch.setattr(server, 'describe_auth_state', fail)
+    result = server.connection_status()
+    assert result['configuration_status'] == configuration
+    assert result['auth_status'] == 'unknown'
+    assert result['live_access'] == 'not_checked'
+    assert 'secret-marker' not in str(result)
+
+
+def test_connection_status_missing_configuration_does_not_read_tokens(monkeypatch):
+    monkeypatch.setattr(server, 'missing_required_env_vars', lambda: ['GOOGLE_CLIENT_ID'])
+    def forbidden(**kw):
+        pytest.fail('Incomplete setup must not read tokens')
+    monkeypatch.setattr(server, 'describe_auth_state', forbidden)
+    result = server.connection_status()
+    assert result['configuration_status'] == 'incomplete'
+    assert result['auth_status'] == 'unknown'
+    assert result['live_access'] == 'not_checked'
+
+
+def test_connection_status_leaves_token_bytes_and_permissions_unchanged(tmp_path, monkeypatch):
+    import json
+    from flin_google_search_console_mcp import auth
+    token = tmp_path / 'token.json'
+    token.write_text(json.dumps({'token':'fixture-token','refresh_token':'fixture-refresh',
+                                'client_id':'fixture-client','client_secret':'fixture-secret',
+                                'expiry':'2000-01-01T00:00:00Z'}))
+    token.chmod(0o600)
+    monkeypatch.setenv('GOOGLE_CLIENT_ID', 'fixture-client')
+    monkeypatch.setenv('GOOGLE_CLIENT_SECRET', 'fixture-secret')
+    monkeypatch.setenv('GOOGLE_SEARCH_CONSOLE_TOKEN_PATH', str(token))
+    before = (token.read_bytes(), token.stat().st_mtime_ns, token.stat().st_mode)
+    def forbidden(*args, **kwargs):
+        pytest.fail('Status must not call Google, refresh credentials or start OAuth')
+    monkeypatch.setattr(auth, '_refresh_credentials', forbidden)
+    monkeypatch.setattr(auth, '_run_installed_app_flow', forbidden)
+    monkeypatch.setattr(server, 'list_sites_data', forbidden)
+    result = server.connection_status()
+    assert result['configuration_status'] == 'configured'
+    assert result['auth_status'] == 'unknown'
+    assert result['live_access'] == 'not_checked'
+    assert 'fixture-' not in str(result)
+    assert (token.read_bytes(), token.stat().st_mtime_ns, token.stat().st_mode) == before

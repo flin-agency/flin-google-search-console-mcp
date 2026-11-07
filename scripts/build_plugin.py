@@ -19,7 +19,7 @@ PLUGIN_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md")
 
 def plugin_inputs(root: Path) -> dict[str, Path]:
     inputs = {name: root / "plugin" / name for name in PLUGIN_FILES}
-    inputs.update({name: root / name for name in ("PRIVACY.md", "LICENSE", "SUPPORT.md")})
+    inputs.update({name: root / name for name in ("PRIVACY.md", "LICENSE", "SUPPORT.md", "SECURITY.md")})
     inputs["icon.svg"] = root / "assets" / "icon.svg"
     for name in ("pyproject.toml", "uv.lock", "README.md"):
         inputs[f"runtime/{name}"] = root / name

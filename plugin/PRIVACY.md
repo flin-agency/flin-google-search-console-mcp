@@ -1,101 +1,39 @@
-# Privacy Policy — flin Search Console
+# Privacy — flin Search Console
 
-Updated 6 November 2026 for version 0.1.6.
+Updated 7 November 2026. Publisher: flin GmbH, Weinbergstrasse 31, 8006 Zürich,
+Switzerland. Privacy contact: **flin@flin.agency**.
 
-Prepared for publisher review before directory submission. The data-handling
-description below reflects the software prepared in this repository.
+The server runs on your computer. OAuth sign-in and token refresh communicate
+with Google; Search Console requests send property names, filters, dates and
+inspection URLs to Google's APIs over HTTPS. Results return to Claude or your
+chosen MCP client and can become part of its conversations. The server does not
+fetch inspected webpages, send data to flin, or collect telemetry.
 
-## Publisher and scope
+The installer/update process contacts GitHub, PyPI and Python/package download
+services. They receive normal connection metadata such as IP addresses, never
+your Google credentials from this server. Stable compatible server updates are
+checked at startup; code and resolved dependencies can change without reinstalling.
 
-flin GmbH develops this independent, locally running Google Search Console
-integration. This policy covers its Python server, desktop extension and Claude
-Code plugin. It does not replace the policies of Google, Anthropic, GitHub or
-the package-download services used during installation.
-
-Public product support: https://github.com/flin-agency/flin-google-search-console-mcp/issues
-
-Responsible publisher: flin GmbH, Weinbergstrasse 31, 8006 Zürich, Switzerland.
-Privacy and security contact: [flin@flin.agency](mailto:flin@flin.agency).
-The published company privacy contact is Nicolas Glauser. Company details are
-listed in the [imprint](https://flin.agency/impressum/) and
-[company privacy policy](https://flin.agency/privacy-policy/).
-
-## Information used
-
-You supply a Google Desktop OAuth client ID and secret and optionally a default
-Search Console property. Google sign-in provides access and refresh tokens. The
-server requests only `https://www.googleapis.com/auth/webmasters.readonly`.
-
-When you invoke a tool, it processes the selected account label, property, dates,
-dimensions, filters, pagination and, for inspection, the URL you ask to inspect.
-Google returns property identifiers, permissions, search queries, page URLs,
-performance metrics and indexing information. These may be confidential or contain
-personal information depending on your property and queries.
-
-## Data flow and sharing
-
-- The server runs on your computer and sends authentication requests to Google
-  Accounts and Google's OAuth token service. A temporary local loopback HTTP
-  callback handles browser sign-in.
-- It sends Search Console query parameters and authorization tokens to Google's
-  APIs over HTTPS. It does not fetch the contents of the inspected website.
-- It returns results to the MCP client you use. When that client is Claude,
-  results can become part of your conversation and be processed by Anthropic
-  according to your plan, settings and Anthropic's terms and privacy policy.
-- The server contains no flin.agency telemetry, advertising, analytics or hosted
-  data-collection endpoint. It does not send OAuth credentials or Search Console
-  results to flin.agency. It does not read chat history or unrelated user files.
-- Installation may download Python and packages from distribution services.
-  From desktop installer 0.1.6, each server start checks PyPI for the latest
-  compatible stable server release and downloads updates when available.
-  Those services receive normal connection information such as your IP address.
-  Server code and dependencies can therefore change without reinstalling the
-  extension. No Google credentials are sent to PyPI.
-  GitHub receives requests when you download releases or use its support service.
-
-## Storage and retention
-
-OAuth token JSON files are stored locally at these default locations:
+OAuth client settings come from your administrator/password manager. Claude
+handles those settings. Google access/refresh tokens are stored separately as
+**unencrypted JSON files**, normally in:
 
 - macOS: `~/Library/Application Support/flin-google-search-console-mcp/`
 - Windows: `%APPDATA%\flin-google-search-console-mcp\`
 - Linux: `~/.config/flin-google-search-console-mcp/`
 
-The default account uses `token.json`; named accounts use separate JSON files.
-A token file can contain a refresh token, access token, expiry, scope, client ID
-and client secret. **These files are not encrypted by this server.** On macOS
-and Linux, new directories are private and token files have owner-only permissions.
-On Windows, protection depends on the permissions of your user profile; the
-server does not configure Windows ACLs. Device backups may also retain copies.
+The default file is `token.json`; named accounts use their account label. Manual
+installations can override these paths. macOS/Linux token files require 0600;
+Windows protection depends on profile ACLs. The server does not put tokens in
+Keychain. It does not persist Search Console result datasets. Tokens remain until
+deleted; backups, client logs and conversations have separate retention.
 
-Claude manages the settings you enter. Fields marked sensitive use the client's
-secure storage where supported, but Google token JSON files remain separate.
-Custom token paths and directories may be configured in manual installations.
+To disconnect, disable the extension and stop its server, revoke access in
+[Google Account connections](https://myaccount.google.com/connections), delete the
+relevant token files above, and remove saved OAuth settings in Claude. Delete
+client conversations/exports and backups separately if needed. Uninstalling alone
+does not revoke Google access or remove the shared token directory.
 
-The server does not maintain an application database or persist Search Console
-result datasets. Tokens remain until you delete them; they may be refreshed
-during later requests. Claude conversations, client diagnostic logs and any
-exports you create have their own retention settings. The server exposes
-sanitized error messages, but client logs should still be treated as private.
-
-## Disconnecting and deletion
-
-Disable the extension or plugin and stop the server. Revoke the application's
-access in your Google Account connections settings, then delete the relevant
-token files from the storage directory. Remove saved client configuration in
-Claude and separately delete conversations or exports if desired.
-
-Uninstalling the extension/plugin alone does not guarantee deletion of the
-shared token directory, backups or conversation history. Revocation prevents
-future use of the revoked authorization; it does not delete previous results.
-
-## Support requests and changes
-
-Only send the minimum information needed to troubleshoot. Public GitHub issues
-are public; never attach tokens, client secrets, private queries or customer data.
-We may update this policy when the implementation changes and publish the update
-alongside the source and release.
-
-Third-party information: [Google Privacy Policy](https://policies.google.com/privacy),
-[Anthropic Privacy Policy](https://www.anthropic.com/legal/privacy),
-[Google Account connections](https://myaccount.google.com/connections).
+[Detailed background](https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/docs/privacy-details.md)
+· [Security](https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/SECURITY.md)
+· [Support](https://github.com/flin-agency/flin-google-search-console-mcp/blob/main/SUPPORT.md)
